@@ -182,7 +182,7 @@ let's define a `showMap` function by converting our `Map` to a printable string:
 
 ```haskell
 showMap :: Employees -> String
-showMap = List.intercalate "\n" . map showEmployee . Map.toList
+showMap = List.intercalate "\n" . map show . Map.toList
 ```
 
 Let's give it a try:
