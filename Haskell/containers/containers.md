@@ -40,10 +40,10 @@ corresponding examples can be easily derived for all of the above.
 
 One of the common mappings in real life that we encounter is a person's
 identification number, that maps a unique number to an actual human
-being. Social Security Number (SSN) is normally used for that purpose in
-the USA. Although it is a 9 digit number and using `IntMap` would be more
-efficient, it does have some structure, so we will take advantage of it and use
-a custom data type `SSN` instead of an `Int` as a key.
+being. Social Security Number (SSN) is normally used for that purpose in the
+USA. Although it is a 9 digit number and using `IntMap` would be more efficient,
+it does have some structure to it and we will take advantage of it, so we will
+use a custom data type `SSN` instead of an `Int` as a key.
 
 ```haskell
 #!/usr/bin/env stack
@@ -123,7 +123,7 @@ the first element of the tuple, it would be more efficient to use
 
 ### Operate on data.
 
-Now that we have our program properly set up most of available functions will
+Now that we have our program properly set up, most of available functions will
 correspond to functions that we will try to use on our data, e.g. `lookupEmployee`:
 
 ```haskell
@@ -203,9 +203,10 @@ is done in ascending order, but in order to guarantee this behavior
 `Map.toAscList` should be used instead or `Map.toDescList` to get it in a
 reversed order. Conversion is nice an simple, but how about using folding in a
 way that is native to `Map`? We should probably improve formatting as
-well. Unfortunately, in order to get similar output we need to handle a special
-case of omitting addition of a new line character to the first entry in the
-table, so we have to treat it separatly and handle a case when `Map` is empty.
+well. Unfortunately, in order to get a similar output we need to handle a
+special case of omitting addition of a new line character to the first entry in
+the table, so we have to treat it separatly and handle a case when `Map` is
+empty.
 
 ```haskell
 showEmployee :: (SSN, Person) -> String
@@ -222,7 +223,7 @@ showEmployees es
     prepender key person acc = '\n' : showE key person ++ acc
 ```
 
-Now that looks a bit better:
+Now that looks a bit nicer:
 ```haskell
 λ> putStrLn $ showEmployees $ employees
 521-01-8756: Mary Jones
@@ -284,5 +285,5 @@ If we are sure that our function is not only 1-to-1, but it is also monotonic
 (i.e. it doesn't change the order of the resulting keys) we could use a more
 efficient mapping function `Map.mapKeysMonotonic`. Say a `show` function on
 `SSN` would be safe to use, since ordering is preserved in our
-implementation. One of the simplest examples of non-monotonic functions would be
+implementation. One of the simplest examples of a non-monotonic function would be
 `negate` and strictly-monotonic `succ`.
