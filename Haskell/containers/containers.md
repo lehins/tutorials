@@ -41,17 +41,20 @@ corresponding examples can be easily derived for all of the above.
 One of the common mappings in real life that we encounter is a person's
 identification number, that maps a unique number to an actual human
 being. Social Security Number (SSN) is normally used for that purpose in the
-USA. Although it is a 9 digit number and using `IntMap` would be more efficient,
-it does have some structure to it and we will take advantage of it, so we will
-use a custom data type `SSN` instead of an `Int` as a key.
+USA, despite that it is not totally unique, for demonstration purpose, we will
+assume it actually is. Although it is a 9 digit number and using `IntMap` would
+be more efficient, it does have some structure to it and we will take advantage
+of it, so we will use a custom data type `SSN` instead of an `Int` as a key.
 
 ```haskell
 #!/usr/bin/env stack
--- stack --install-ghc --resolver lts-7.7 runghc --package containers
+-- stack --install-ghc --resolver lts-7.7 runghc
 import qualified Data.Map as Map
 import Data.List as List
 import Text.Printf
 
+-- Social Security Number. Commonly used as a unique identification number of a
+-- person. 
 data SSN = SSN
   { ssnPrefix :: Int
   , ssnInfix :: Int
@@ -59,7 +62,7 @@ data SSN = SSN
   } deriving (Eq, Ord)
 
 instance Show SSN where
-  show (SSN p i s) = List.intercalate "-" [printf "%03d" p, printf "%02d" i, printf "%03d" s]
+  show (SSN p i s) = printf "%03d-%02d-%04d" p i s
   
 data Person = Person
   { firstName :: String
@@ -109,7 +112,7 @@ employees =
     , (ssn 521 01 8756, Person "Mary" "Jones")
     , (ssn 585 11 1234, Person "William" "Smith")
     , (ssn 525 15 5673, Person "Maria" "Gonzalez")
-    , (ssn 523 34 1234, Person "Bob" "Jones")
+    , (ssn 524 34 1234, Person "Bob" "Jones")
     , (ssn 522 43 9862, Person "John" "Doe")
     , (ssn 527 75 1035, Person "Julia" "Bloom")
     ]
@@ -134,8 +137,8 @@ lookupEmployee = Map.lookup
 which does exactly what is expected of it:
 
 ```haskell
-λ> lookupEmployee (ssn 523 34 1234) employees
-Just (Person {firstName = "Marry", lastName = "Jones"})
+λ> lookupEmployee (ssn 524 34 1234) employees
+Just Bob Jones
 λ> lookupEmployee (ssn 555 12 3456) employees
 Nothing
 ```
@@ -143,24 +146,24 @@ Nothing
 In order to refrain from redefining functions which trivially correspond to exisitng
 ones, let's go through some of them:
 
-* Getting total number of employees.
-```haskell
-λ> Map.size employees
-7
-```
 * Checking existence of an employee by the social security number:
 ```haskell
-λ> Map.member (ssn 585 11 1234) employees
+λ> ssn 585 11 1234 `Map.member` employees
 True
-λ> Map.member (ssn 621 24 8736) employees
+λ> ssn 621 24 8736 `Map.member` employees
 False
 ```
 * Looking up an employee with a default name:
 ```haskell
 λ> Map.findWithDefault (Person "Bill" "Smith") (ssn 585 11 1234) employees
-Person {firstName = "William", lastName = "Smith"}
+William Smith
 λ> Map.findWithDefault (Person "Anthony" "Richardson") (ssn 621 24 8736) employees
-Person {firstName = "Anthony", lastName = "Richardson"}
+Anthony Richardson
+```
+* Getting total number of employees.
+```haskell
+λ> Map.size employees
+7
 ```
 * Deleting an employee:
 ```haskell
@@ -191,7 +194,7 @@ Let's give it a try:
 λ> putStrLn $ showMap employees
 (521-01-8756,Mary Jones)
 (522-43-9862,John Doe)
-(523-34-1234,Bob Jones)
+(524-34-1234,Bob Jones)
 (525-15-5673,Maria Gonzalez)
 (525-21-5423,John Doe)
 (527-75-1035,Julia Bloom)
@@ -201,12 +204,11 @@ Let's give it a try:
 Worth noting, that all emplyees are sorted by their SSN and conversion to a list
 is done in ascending order, but in order to guarantee this behavior
 `Map.toAscList` should be used instead or `Map.toDescList` to get it in a
-reversed order. Conversion is nice an simple, but how about using folding in a
-way that is native to `Map`? We should probably improve formatting as
-well. Unfortunately, in order to get a similar output we need to handle a
-special case of omitting addition of a new line character to the first entry in
-the table, so we have to treat it separatly and handle a case when `Map` is
-empty.
+reversed order.
+
+Conversion is nice an simple, but how about using folding in a way that is
+native to a `Map`? While we are at it, we should probably improve formatting as
+well. 
 
 ```haskell
 showEmployee :: (SSN, Person) -> String
@@ -228,7 +230,7 @@ Now that looks a bit nicer:
 λ> putStrLn $ showEmployees $ employees
 521-01-8756: Mary Jones
 522-43-9862: John Doe
-523-34-1234: Bob Jones
+524-34-1234: Bob Jones
 525-15-5673: Maria Gonzalez
 525-21-5423: John Doe
 527-75-1035: Julia Bloom
@@ -262,7 +264,7 @@ If for some reson we would like to map a function over the keys we can use
 
 ```haskell:
 λ> Map.keys $ Map.mapKeys show employees
-["521-01-8756","522-43-9862","523-34-1234","525-15-5673","525-21-5423","527-75-1035","585-11-1234"]
+["521-01-8756","522-43-9862","524-34-1234","525-15-5673","525-21-5423","527-75-1035","585-11-1234"]
 ```
 
 We need to pay some extra attention to usage of `Map.mapKeys`, because whenever
@@ -287,3 +289,85 @@ efficient mapping function `Map.mapKeysMonotonic`. Say a `show` function on
 `SSN` would be safe to use, since ordering is preserved in our
 implementation. One of the simplest examples of a non-monotonic function would be
 `negate` and strictly-monotonic `succ`.
+
+## Filtering
+
+Let's start with a couple of simlpe examples. For instance getting all employees
+with a last name "Jones":
+
+```haskell
+λ> printEmployees (Map.filter (("Jones"==) . lastName) employees)
+521-01-8756: Mary Jones
+524-34-1234: Bob Jones
+```
+
+Partitioning by gender:
+```haskell
+λ> let (men, women) = Map.partition ((Male==) . gender) employees
+λ> printEmployees men
+522-43-9862: John Doe (Male)
+524-34-1234: Bob Jones (Male)
+525-21-5423: John Doe (Male)
+585-11-1234: William Smith (Male)
+λ> printEmployees women
+521-01-8756: Mary Jones (Female)
+525-15-5673: Maria Gonzalez (Female)
+527-75-1035: Julia Bloom (Female)
+```
+
+
+Prior to June 25th, 2011, Social Security prefixes, also called [area
+numbers](<https://www.ssa.gov/employer/stateweb.htm>), were restricted to states
+where they were issued in. Let's assume this is still the case and use this
+information to figure out which states employees received their Social Security
+Numbers.
+
+First, we need to define a function, that retrieves employees within a
+prefix range, so a naïve approach would be to use `Map.filterWithKey`:
+
+```haskell
+withinRangeNaive :: Int -> Int -> Employees -> Employees
+withinRangeNaive prefixLow prefixHigh = Map.filterWithKey ssnInRange where
+  ssnInRange (SSN prefix _ _) _ = prefix >= prefixLow && prefix <= prefixHigh
+```
+
+which runs in _O(n)_, but we can do better than that, simply by taking
+advantage of ordering of keys:
+
+```haskell
+withinRange :: Int -> Int -> Employees -> Employees
+withinRange prefixLow prefixHigh =
+  fst . Map.split (ssn (prefixHigh + 1) 0 0) . snd . Map.split (ssn prefixLow 0 0)
+
+employeesFromColorado :: Employees -> Employees
+employeesFromColorado = withinRange 521 524
+```
+
+Naturally, this function will give us all employees that got their Social
+Security Card in Colorado:
+
+```haskell
+λ> printEmployees $ employeesFromColorado employees
+521-01-8756: Mary Jones
+522-43-9862: John Doe
+524-34-1234: Bob Jones
+```
+
+That worked well for Colorado state, but some states have area numbers that are
+not consecutive, which means we need to join together results from a couple of
+ranges:
+
+```haskell
+employeesFromNewMexico :: Employees -> Employees
+employeesFromNewMexico es = withinRange 525 525 es `Map.union` withinRange 585 585 es
+```
+
+We can now use above function to find employees that are not from New Mexico:
+
+```haskell
+λ> printEmployees (employees Map.\\ employeesFromNewMexico employees)
+521-01-8756: Mary Jones
+522-43-9862: John Doe
+524-34-1234: Bob Jones
+527-75-1035: Julia Bloom
+```

@@ -1,5 +1,5 @@
 #!/usr/bin/env stack
--- stack --install-ghc --resolver lts-7.7 runghc --package containers
+-- stack --install-ghc --resolver lts-7.7 runghc
 
 import qualified Data.Map as Map
 import Data.List as List
@@ -18,7 +18,7 @@ data SSN = SSN
   } deriving (Eq, Ord)
 
 instance Show SSN where
-  show (SSN p i s) = List.intercalate "-" [printf "%03d" p, printf "%02d" i, printf "%03d" s]
+  show (SSN p i s) = printf "%03d-%02d-%04d" p i s
 
 ssn :: Int -> Int -> Int -> SSN
 ssn p i s
@@ -27,14 +27,16 @@ ssn p i s
   | s < 0 || s > 9999 = error $ "Invalid SSN suffix: " ++ show s
   | otherwise = SSN p i s
 
+data Gender = Male | Female deriving (Eq, Show)
 
 data Person = Person
   { firstName :: String
   , lastName :: String
+  , gender :: Gender
   } deriving (Eq)
 
 instance Show Person where
-  show (Person fName lName) = fName ++ ' ':lName
+  show (Person fName lName g) = fName ++ ' ':lName ++ " (" ++ show g ++ ")"
 
 type Employees = Map.Map SSN Person
 
@@ -45,13 +47,13 @@ type Employees = Map.Map SSN Person
 employees :: Employees
 employees =
   Map.fromList
-    [ (ssn 525 21 5423, Person "John" "Doe")
-    , (ssn 521 01 8756, Person "Mary" "Jones")
-    , (ssn 585 11 1234, Person "William" "Smith")
-    , (ssn 525 15 5673, Person "Maria" "Gonzalez")
-    , (ssn 523 34 1234, Person "Bob" "Jones")
-    , (ssn 522 43 9862, Person "John" "Doe")
-    , (ssn 527 75 1035, Person "Julia" "Bloom")
+    [ (ssn 525 21 5423, Person "John" "Doe" Male)
+    , (ssn 521 01 8756, Person "Mary" "Jones" Female)
+    , (ssn 585 11 1234, Person "William" "Smith" Male)
+    , (ssn 525 15 5673, Person "Maria" "Gonzalez" Female)
+    , (ssn 524 34 1234, Person "Bob" "Jones" Male)
+    , (ssn 522 43 9862, Person "John" "Doe" Male)
+    , (ssn 527 75 1035, Person "Julia" "Bloom" Female)
     ]
 
 
@@ -83,10 +85,9 @@ showEmployees es
     ((ssn0, person0), rest) = Map.deleteFindMin es
     prepender key person acc = '\n' : showE key person ++ acc
 
+printEmployees :: Employees -> IO ()
+printEmployees = putStrLn . showEmployees
 
--- |
--- λ> lookupEmployee (ssn 523 34 1234) employees
--- Just (Person {firstName = "Marry", lastName = "Jones"})
 lookupEmployee :: SSN -> Employees -> Maybe Person
 lookupEmployee = Map.lookup
 
@@ -97,9 +98,9 @@ lookupEmployee = Map.lookup
 -- λ> Map.insert (ssn 987 78 1323) (Person "Joanna" "Bloom") employees
 
 
--- | λ> putStrLn $ showEmployees $ Map.map keepFirstInitial employees
+-- | λ> printEmployees $ Map.map keepFirstInitial employees
 keepFirstInitial :: Person -> Person
-keepFirstInitial p@(Person (x:_) _) = p { firstName = x:"." }
+keepFirstInitial p@(Person (x:_) _ _) = p { firstName = x:"." }
 
 -- Map.map
 conciseEmployees :: Employees
@@ -112,8 +113,8 @@ conciseEmployees = Map.map keepFirstInitial employees
 
 -- | Got married, changed her last name, let's make sure first name hasn't
 -- changed, but add her as a new employee if she doesn't exist in db yet.
--- λ> putStrLn $ showEmployees $ changedLastName (ssn 987 78 1323) (Person "Joanna" "Carter") employees
--- λ> putStrLn $ showEmployees $ changedLastName (ssn 527 75 1035) (Person "Julia" "Carter") employees
+-- λ> printEmployees $ changedLastName (ssn 987 78 1323) (Person "Joanna" "Carter") employees
+-- λ> printEmployees $ changedLastName (ssn 527 75 1035) (Person "Julia" "Carter") employees
 changedLastName :: SSN -> Person -> Employees -> Employees
 changedLastName = Map.insertWith checkFirstName
   where
@@ -142,10 +143,21 @@ showEmployeesReversed es
     ((firstSSN, firstName), rest) = Map.deleteFindMax es
     prepender acc key person = '\n' : showE key person ++ acc
 
-{-
-data Candidate = Candidate1
-               | Candidate2
-               | Candidate3
 
-vote :: SSN -> Candidate -> Votes -> Votes
--}
+withinRangeNaive :: Int -> Int -> Employees -> Employees
+withinRangeNaive prefixLow prefixHigh = Map.filterWithKey ssnInRange where
+  ssnInRange (SSN prefix _ _) _ = prefix >= prefixLow && prefix <= prefixHigh
+
+
+withinRange :: Int -> Int -> Employees -> Employees
+withinRange prefixLow prefixHigh =
+  fst . Map.split (ssn (prefixHigh + 1) 0 0) . snd . Map.split (ssn prefixLow 0 0)
+
+
+employeesFromColorado :: Employees -> Employees
+employeesFromColorado = withinRange 521 524
+
+
+employeesFromNewMexico :: Employees -> Employees
+employeesFromNewMexico es = withinRange 525 525 es `Map.union` withinRange 585 585 es
+
