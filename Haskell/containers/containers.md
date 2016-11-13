@@ -8,23 +8,23 @@ can use for the problem at hand?
 
 Haskell is a pure functional language, thus, by it's nature, most of the
 available containers are immutable and, without a doubt, the most common one is
-a list `[a]`. Certainly, it is not efficiency that made list so popular, but
-rather its simplicity, consequently it is also the first type of data structure
+a list `[a]`. Certainly, it is not efficiency that made it so popular, but
+rather its simplicity, consequently, it is also the first data structure,
 that you get introduced to while learning Haskell. Although, lists are perfectly
-suatable for some problems, more often than not, we need something that is more
+suitable for some problems, more often than not, we need something that is more
 tailored to how we are trying to use our data.
 
 Here are some situations
 that [containers](https://www.stackage.org/lts/package/containers) package can
-be of help. It contains efficient implementation of some of the most commonly
+be of help. It provides efficient implementation of some of the most commonly
 used containers used in programming:
 * `Data.Set` - you care about uniqueness and possibly the order of elements.
 * `Data.Map` - you need a mapping from unique keys to values and operations you
   perform can take advantage of ordering of keys.
 * `Data.IntSet` and `Data.IntMap` - just as above, but when elements and keys
-  respectfully are `Int`s.
+  respectively are `Int`s.
 * `Data.Sequence` - can be of use when a linear structure is required for a
-  finite number of elements with fast access from its both sides and a fast
+  finite number of elements with fast access from both of its sides and a fast
   concatenation with other sequences.
 * `Data.Tree` and `Data.Graph` - for describing more complicated relations of
   elements.
@@ -38,13 +38,13 @@ corresponding examples can be easily derived for all of the above.
 
 ### Setup a problem.
 
-One of the common mappings in real life that we encounter is a person's
+One of the common mappings in real life, that we encounter, is a person's
 identification number, that maps a unique number to an actual human
 being. Social Security Number (SSN) is normally used for that purpose in the
 USA and despite that it is not totally unique, for demonstration purpose, we will
 assume it actually is. Although it is a 9 digit number and using `IntMap` would
 be more efficient, it does have some structure to it and we will take advantage
-of it, so we will use a custom data type `SSN` instead of an `Int` as a key.
+of it, so we will use a custom data type `SSN` as a key.
 
 ```haskell
 #!/usr/bin/env stack
@@ -79,12 +79,12 @@ instance Show Person where
   show (Person fName lName g) = fName ++ ' ':lName ++ " (" ++ show g ++ ")"
 ```
 
-While `SSN` will be used as a key in our `Map` to a `Person`, I would like to
-stress how important `Eq` and `Ord` instances of a key actually are. Because
-they are used for underlying representation of a `Map`, providing incomplete or
-incorrect instances for these classes will lead to some strange behavior of your
-data mappings, therefore either make sure you know what you are doing when creating
-custom instances, or used derived instances, as they are always safe.
+I would like to stress how important `Eq` and `Ord` instances of a key actually
+are. Because they are used for underlying representation of a `Map`, providing
+incomplete or incorrect instances for these classes will lead to some strange
+behavior of your data mappings, therefore, either make sure you know what you are
+doing when creating custom instances, or use derived instances, as they are
+always safe.
 
 Because Social Security Numbers have a specific structure we would like to
 enforce it by providing a constructor function that performs certain validations.
@@ -98,10 +98,9 @@ mkSSN p i s
   | otherwise = SSN p i s
 ```
 
-Moreover, until a few years ago, Social Security Number prefix (used to be
-called Area Number) could tell you the actual state a number was issued in,
-which, for the sake of example, we will pretend is still the case and abuse that
-pattern.
+Moreover, until a few years ago, Social Security Number prefix (also known as
+Area Number) could tell you the actual state a number was issued in, which, for
+the sake of example, we will pretend is still the case and abuse that pattern.
 
 ### Converting maps
 
@@ -123,11 +122,11 @@ employees =
     ]
 ```
 
-As you can see above, there is no particular order to our data as we defined
-it, which results in creation of a `Map` in _O(n*log n)_ time complexity, but if
-we were sure ahead of time that our list was sorted and unique with respect to
-the first element of a tuple, it would be more efficient to use
-`Map.fromAsclist`, which would run in _O(n)_ complexity instead.
+As you can see above, there is no particular order to our data as we defined it,
+which results in creation of a `Map` in _O(n*log n)_ time complexity, but, if we
+were sure ahead of time, that our list was sorted and unique with respect to the
+first element of a tuple, it would be more efficient to use `Map.fromAscList`,
+which would run in _O(n)_ complexity instead.
 
 ### Operate on data.
 
@@ -149,10 +148,10 @@ Just Bob Jones (Male)
 Nothing
 ```
 
-In order to refrain from redefining functions which trivially correspond to exisiting
+In order to refrain from redefining functions which trivially correspond to existing
 ones, let's go through some of them:
 
-* Checking existence of an employee by the social security number:
+* Checking presence of an employee by the social security number:
 ```haskell
 λ> mkSSN 585 11 1234 `Map.member` employees
 True
@@ -207,14 +206,14 @@ Let's give it a try:
 (585-11-1234,William Smith (Male))
 ```
 
-Worth noting, that all emplyees are sorted by their SSN and conversion to a list
-is done in ascending order, but if it is required to guarantee this behavior
-`Map.toAscList` should be used instead, or `Map.toDescList` to get it in a
-reverse order.
+As you can see, all employees are sorted by their SSN, so conversion to a list is
+done in ascending order, but it is worth noting, that if it is required to
+guarantee this behavior `Map.toAscList` should be used instead, or
+`Map.toDescList` to get it in a reverse order.
 
 Conversion is nice an simple, but how about using folding in a way that is
-native to a `Map`? While we are at it, we should probably tailor our formatting
-to employees as well.
+native to a `Map`? While we are at it, we should probably improve formatting as
+well.
 
 ```haskell
 showEmployee :: (SSN, Person) -> String
@@ -234,7 +233,8 @@ printEmployees :: Employees -> IO ()
 printEmployees = putStrLn . showEmployees
 ```
 
-Now that looks a bit nicer:
+Now that looks slightly better:
+
 ```haskell
 λ> printEmployees employees
 521-01-8756: Mary Jones (Female)
@@ -246,10 +246,10 @@ Now that looks a bit nicer:
 585-11-1234: William Smith (Male)
 ```
 
-__Excersise__: Using the fact that List is an instance `Monoid` implement
+__Exercise__: Using the fact that List is an instance of `Monoid`, implement
 `showEmployees` with the help of `Map.foldMapWithKey`.
 
-__Excersise__: Implement `showEmployeesReversed` using `Map.foldlWithKey`
+__Exercise__: Implement `showEmployeesReversed` using `Map.foldlWithKey`
 (_hint_: use `Map.deleteFindMax`).
 
 
@@ -268,8 +268,8 @@ new elements:
 ["Jones","Doe","Jones","Gonzalez","Doe","Bloom","Smith"]
 ```
 
-If for some reason we would like to map a function over the keys we can use
-`Map.mapKeys` for this, for instance getting a list of all SSN prefixes:
+If for some reason, we would like to map a function over keys, we can use
+`Map.mapKeys` for this purpose, for instance getting a list of all SSN prefixes:
 
 ```haskell:
 λ> Map.keys $ Map.mapKeys (show . ssnPrefix) employees
@@ -278,8 +278,8 @@ If for some reason we would like to map a function over the keys we can use
 
 We need to pay some extra attention to usage of `Map.mapKeys`, because whenever
 a function that is being mapped over is not 1-to-1, it is possible that some
-values will be lost. Although sometimes discarding some elements maybe desired
-or simply irrelevant, here is an example of how we can mistakenly loose an
+values will be lost. Although, sometimes discarding some elements maybe desired
+or simply irrelevant, here is an example of how we can mistakenly lose an
 employee if we assume that last four numbers of a social are unique:
 
 ```haskell
@@ -297,16 +297,16 @@ If we are sure that our function is not only 1-to-1, but it is also monotonic
 efficient mapping function `Map.mapKeysMonotonic`. Say a `show` function on
 `SSN` would be safe to use, since ordering would be preserved. One of the
 simplest examples of a non-monotonic function would be `negate` and a
-strictly-monotonic: `succ`.
+strictly-monotonic one: `succ`.
 
 ## Filtering
 
-Let's start with a couple of simlpe examples:
+Let's start with a couple of simple examples:
 
 ```haskell
 λ> printEmployees (Map.filter (("Jones"==) . lastName) employees)
-521-01-8756: Mary Jones
-524-34-1234: Bob Jones
+521-01-8756: Mary Jones (Female)
+524-34-1234: Bob Jones (Male)
 ```
 
 Partitioning by gender:
@@ -324,11 +324,10 @@ Partitioning by gender:
 ```
 
 
-Prior to June 25th, 2011, Social Security prefixes, also called [Area
-Numbers](<https://www.ssa.gov/employer/stateweb.htm>), were restricted to states
-where they were issued in. Let's assume this is still the case and use this
-information to figure out which states our employees received their Social Security
-Cards in.
+[Prior to June 25th, 2011](<https://www.ssa.gov/employer/stateweb.htm>), Social
+Security prefixes, were restricted to states where they were issued in. Let's
+assume this is still the case and use this information to figure out which
+states our employees received their Social Security Cards in.
 
 First, we need to define a function, that retrieves employees within a
 prefix range, so a naïve approach would be to use `Map.filterWithKey`:
@@ -375,9 +374,10 @@ employeesFromNewMexico es =
 ## Sets and Maps
 
 Until previous example, we've looked at functions that deal only with a single
-`Map`, but most of the familiar functions from set theory are also availble and
-can operate on more than one `Map`/`Set`. In order to provide some meaningful
-examples let's define geographic regions of the USA and their SSN prefix ranges:
+`Map`, but most of the familiar functions from set theory are also made
+available to us, so we can easily operate on more than one `Map`/`Set`. In order
+to provide some meaningful examples let's define geographic regions of the USA
+and their SSN prefix ranges:
 
 
 ### Creation
@@ -409,9 +409,9 @@ For compactness, only states that are considered the South West are included,
 complete source code can be found as
 a [gist](https://gist.github.com/lehins/8003b8e7cd2e56d4da1c2d75c43f4135).
 
-Note, that because we are using `toEnum` and `enumFrom`(`..`), we are guaranteed
-that all states will be unique and in a proper ascending order, thus we are safe
-to use `Set.fromDistinctAscList` instead of a less efficient `Set.fromList` or
+Note, that because we are using `toEnum` and `enumFrom` - (`..`), we are guaranteed
+that all States will be unique and in a proper ascending order, thus we are safe
+to use `Set.fromDistinctAscList` instead of a less efficient `Set.fromList` or even
 `Set.fromAscList`.
 
 ### Set mathematics
@@ -419,7 +419,7 @@ to use `Set.fromDistinctAscList` instead of a less efficient `Set.fromList` or
 Exclude employees from New Mexico:
 
 ```haskell
-λ> printEmployees (employees Map.\\ employeesFrom NewMexico employees)
+λ> printEmployees (employees Map.\\ employeesFromNewMexico employees)
 521-01-8756: Mary Jones
 522-43-9862: John Doe
 524-34-1234: Bob Jones
@@ -447,7 +447,7 @@ fromList [California,Colorado,Texas,Utah]
 
 ### Conversion
 
-Map a State to a set of prefixes that correspond to it:
+Map a State to a set of SSN prefixes that correspond to it:
 
 ```haskell
 statePrefixMap :: Map.Map State (Set.Set Int)
@@ -467,7 +467,7 @@ prefixStateMap = Map.foldlWithKey addPrefixes Map.empty statePrefixMap where
 
 ### Transformation
 
-Using above Map we can list all emplyees we have per state:
+Using above Map we can list all employees we have per state:
 
 ```haskell
 -- | Transform `Map` to another `Map`
@@ -526,9 +526,9 @@ allStateEmployeesMap :: Employees -> Map.Map State Employees
 allStateEmployeesMap es = Map.fromSet (`employeesFrom` es) allStates
 ```
 
-Above function will produce undesired empty Maps of `Employees` for some states,
-but that effect is kept for the sole purpose of demonstrating similarities
-between `Map.filter` and `Map.mapMaybe`:
+Last function will produce undesired empty Maps of `Employees` for some states,
+but there is a reason behind it, it will help us demonstrate similarities between
+`Map.filter` and `Map.mapMaybe`:
 
 ```haskell
 statePersonsMap' :: Employees -> Map.Map State [Person]
@@ -542,7 +542,7 @@ stateSocialsMap' = Map.mapMaybe nonEmptyElems . allStateEmployeesMap
 
 ### Subset and Submap.
 
-Here is how we would check if we are missing a `State` from our `Map`:
+Here is an example of how we would check if we are missing a `State` from our `Map`:
 
 ```haskell
 λ> Set.isProperSubsetOf (Map.keysSet $ allStateEmployeesMap employees) allStates
@@ -559,20 +559,18 @@ True
 ## Conclusion
 
 In this tutorial we looked at very useful `Map` and `Set` containers, but there
-are plenty of other packages that provide implementations for all sorts of data
-structures that might be a better match your needs. In particular, if keys and
+are plenty of other packages that provide implementations of all sorts of data
+structures that might be a better match for your needs. In particular, if keys and
 elements for `Map` and `Set` respectively are hashable and their ordering is of
 no importance, it is recommended to use `HashMap` and `HashSet`
 from
 [unordered-containers](https://www.stackage.org/lts/package/unordered-containers) instead.
-Above package provides very similar interface to one from [containers](https://www.stackage.org/lts/package/containers) package, has
+That package provides very similar interface to one from [containers](https://www.stackage.org/lts/package/containers) library, but it has
 [much smaller memory impact](https://www.fpcomplete.com/blog/2016/05/weigh-package#containers-vs-unordered-containers) and
 better performance.
 
-Here is a list of some packages and tutorials for them that can help you choose and
-get started with an appropiate data structure for your problem:
+Here is a list of some packages and corresponding tutorials, that can help you choose and
+get started with an appropriate data structure for your problem:
 
-* [vector](https://www.stackage.org/lts/package/vector):
-  * [Efficient Packed-Memory Data Representations - vector library](https://haskell-lang.org/library/vector)
-* [bytestring](https://www.stackage.org/lts/package/bytestring) and [text](https://www.stackage.org/lts/package/text):
-  * [String Types](https://haskell-lang.org/tutorial/string-types)
+* [vector](https://www.stackage.org/lts/package/vector): [Efficient Packed-Memory Data Representations - vector library](https://haskell-lang.org/library/vector)
+* [bytestring](https://www.stackage.org/lts/package/bytestring) and [text](https://www.stackage.org/lts/package/text): [String Types](https://haskell-lang.org/tutorial/string-types)
