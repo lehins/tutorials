@@ -55,10 +55,8 @@ lookupEmployee :: SSN -> Employees -> Maybe Person
 lookupEmployee = Map.lookup
 
 
-
 showMap :: (Show k, Show v) => Map.Map k v -> String
 showMap = List.intercalate "\n" . map show . Map.toList
-
 
 
 showEmployee :: (SSN, Person) -> String
@@ -83,38 +81,6 @@ showEmployeesBad es
   | otherwise = tail $ Map.foldrWithKey appender "" es
   where
     appender key person list = '\n' : (curry showEmployee) key person ++ list
-
-
-
-
--- Map.insert
--- | Adding an employee
--- λ> Map.insert (mkSSN 987 78 1323) (Person "Joanna" "Bloom") employees
-
-
--- | λ> printEmployees $ Map.map keepFirstInitial employees
-keepFirstInitial :: Person -> Person
-keepFirstInitial p@(Person (x:_) _ _) = p { firstName = x:"." }
-
--- Map.map
-conciseEmployees :: Employees
-conciseEmployees = Map.map keepFirstInitial employees
-
-
--- Map.insertWith
--- putStrLn $ showEmployees $ Map.insertWith keepFirstInitial (mkSSN 987 78 1323) (Person "Joanna" "Bloom") $ Map.map firstInitial employees
-
-
--- | Got married, changed her last name, let's make sure first name hasn't
--- changed, but add her as a new employee if she doesn't exist in db yet.
--- λ> printEmployees $ changedLastName (mkSSN 987 78 1323) (Person "Joanna" "Carter") employees
--- λ> printEmployees $ changedLastName (mkSSN 527 75 1035) (Person "Julia" "Carter") employees
-changedLastName :: SSN -> Person -> Employees -> Employees
-changedLastName = Map.insertWith checkFirstName
-  where
-    checkFirstName p1 p2
-      | firstName p1 /= firstName p2 = error "Fisrt name has changed."
-      | otherwise = p1 -- attention: the first argument is the new element.
 
 
 -- | Exercise
@@ -151,45 +117,118 @@ employeesFromColorado :: Employees -> Employees
 employeesFromColorado = withinPrefixRange 521 524
 
 
-
-{-| 
-
-### Union
--}
-
 employeesFromNewMexico :: Employees -> Employees
 employeesFromNewMexico es =
   withinPrefixRange 525 525 es `Map.union` withinPrefixRange 585 585 es
 
 
-{-|
-
-λ> printEmployees $ employeesFromNewMexico employees
-525-15-5673: Maria Gonzalez (Female)
-525-21-5423: John Doe (Male)
-585-11-1234: William Smith (Male)
-
-
-For compactness only states that are considered the South West are listed.
--}
-
-data State =
-  Arizona | California | Colorado | NewMexico | Nevada | Oklahoma | Texas | Utah -- ...
+data State
+  = Alabama
+  | Alaska
+  | Arizona
+  | Arkansas
+  | California
+  | Colorado
+  | Connecticut
+  | Delaware
+  | Florida
+  | Georgia
+  | Hawaii
+  | Idaho
+  | Illinois
+  | Indiana
+  | Iowa
+  | Kansas
+  | Kentucky
+  | Louisiana
+  | Maine
+  | Maryland
+  | Massachusetts
+  | Michigan
+  | Minnesota
+  | Mississippi
+  | Missouri
+  | Montana
+  | Nebraska
+  | Nevada
+  | NewHampshire
+  | NewJersey
+  | NewMexico
+  | NewYork
+  | NorthCarolina
+  | NorthDakota
+  | Ohio
+  | Oklahoma
+  | Oregon
+  | Pennsylvania
+  | RhodeIsland
+  | SouthCarolina
+  | SouthDakota
+  | Tennessee
+  | Texas
+  | Utah
+  | Vermont
+  | Virginia
+  | Washington
+  | WestVirginia
+  | Wisconsin
+  | Wyoming
   deriving (Show, Eq, Ord, Enum)
 
 statePrefixRangeMap :: Map.Map State [(Int, Int)]
 statePrefixRangeMap =
-  Map.fromAscList
-    [ (Arizona, [(526, 527)])
-    , (California, [(545, 573)])
-    , (Colorado, [(521, 524)])
-    , (NewMexico, [(525, 525), (585, 585)])
-    , (Nevada, [(530, 530), (680, 680)])
+  Map.fromList
+    [ (NewHampshire, [(1, 3)])
+    , (Maine, [(4, 7)])
+    , (Vermont, [(8, 9)])
+    , (Massachusetts, [(10, 34)])
+    , (RhodeIsland, [(35, 39)])
+    , (Connecticut, [(40, 49)])
+    , (NewYork, [(50, 134)])
+    , (NewJersey, [(135, 158)])
+    , (Pennsylvania, [(159, 211)])
+    , (Maryland, [(212, 220)])
+    , (Delaware, [(221, 222)])
+    , (Virginia, [(223, 231)])
+    , (NorthCarolina, [(232, 232)])
+    , (WestVirginia, [(232, 236)])
+    , (SouthCarolina, [(247, 251)])
+    , (Georgia, [(252, 260)])
+    , (Florida, [(261, 267)])
+    , (Ohio, [(268, 302)])
+    , (Indiana, [(303, 317)])
+    , (Illinois, [(318, 361)])
+    , (Michigan, [(362, 386)])
+    , (Wisconsin, [(387, 399)])
+    , (Kentucky, [(400, 407)])
+    , (Tennessee, [(408, 415)])
+    , (Alabama, [(416, 424)])
+    , (Mississippi, [(425, 428)])
+    , (Arkansas, [(429, 432)])
+    , (Louisiana, [(433, 439)])
     , (Oklahoma, [(440, 448)])
     , (Texas, [(449, 467)])
+    , (Minnesota, [(468, 477)])
+    , (Iowa, [(478, 485)])
+    , (Missouri, [(486, 500)])
+    , (NorthDakota, [(501, 502)])
+    , (SouthDakota, [(503, 504)])
+    , (Nebraska, [(505, 508)])
+    , (Kansas, [(509, 515)])
+    , (Montana, [(516, 517)])
+    , (Idaho, [(518, 519)])
+    , (Wyoming, [(520, 520)])
+    , (Colorado, [(521, 524)])
+    , (NewMexico, [(525, 525), (585, 585)])
+    , (Arizona, [(526, 527)])
     , (Utah, [(528, 529)])
+    , (Nevada, [(530, 530), (680, 680)])
+    , (Washington, [(531, 539)])
+    , (Oregon, [(540, 544)])
+    , (California, [(545, 573)])
+    , (Alaska, [(574, 574)])
+    , (Hawaii, [(575, 576)])
     ]
--- ...
 
 
 -- | Map a state to a set of prefixes that correspond to it.
@@ -198,12 +237,6 @@ statePrefixMap =
   Map.fromSet
     (Set.fromList . concatMap (uncurry enumFromTo) . (statePrefixRangeMap Map.!))
     allStates
-  -- alternative:    
-  -- Map.fromSet
-  -- (Set.unions .
-  --  map (Set.fromList . uncurry enumFromTo) . (statePrefixRangeMap Map.!))
-  -- allStates
-
 
 
 -- | Inverse Map of what we have above: from prefix to State
@@ -253,39 +286,6 @@ stateSocialsMap' = Map.mapMaybe nonEmptyElems . allStateEmployeesMap
                           | otherwise = Just $ Map.keysSet sem
 
 
-{-
-Lets' check if we have at least one state that we are missing an employee from:
-
-λ> Set.isProperSubsetOf (Map.keysSet $ allStatePersonMap employees) allStates
-False
-λ> Set.isProperSubsetOf (Map.keysSet $ statePersonMap employees) allStates
-True
-λ> Map.isProperSubmapOfBy (const . const True) (allStatePersonMap employees) statePrefixMap
-False
-λ> Map.isProperSubmapOfBy (const . const True) (statePersonMap employees) statePrefixMap
-True
-
--}
-
-
-
-
-
-
-
-{- |
-
-### Difference
-
-
-All employees that are not from New Mexico.
-
-λ> printEmployees (employees Map.\\ employeesFrom NewMexico employees)
-521-01-8756: Mary Jones (Female)
-522-43-9862: John Doe (Male)
-524-34-1234: Bob Jones (Male)
-527-75-1035: Julia Bloom (Female)
-
--}
-
+symmetricDifference :: Ord a => Set.Set a -> Set.Set a -> Set.Set a
+symmetricDifference a b = Set.union a b Set.\\ Set.intersection a b
 

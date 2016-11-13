@@ -389,7 +389,7 @@ data State =
 
 statePrefixRangeMap :: Map.Map State [(Int, Int)]
 statePrefixRangeMap =
-  Map.fromAscList
+  Map.fromList
     [ (Arizona, [(526, 527)])
     , (California, [(545, 573)])
     , (Colorado, [(521, 524)])
@@ -406,12 +406,44 @@ allStates = Set.fromDistinctAscList [toEnum 0 ..]
 ```
 
 For compactness, only states that are considered the South West are included,
-complete source code can be found on [gist](TODO: place all source code in gist).
+complete source code can be found as
+a [gist](https://gist.github.com/lehins/8003b8e7cd2e56d4da1c2d75c43f4135).
 
 Note, that because we are using `toEnum` and `enumFrom`(`..`), we are guaranteed
 that all states will be unique and in a proper ascending order, thus we are safe
 to use `Set.fromDistinctAscList` instead of a less efficient `Set.fromList` or
 `Set.fromAscList`.
+
+### Set mathematics
+
+Exclude employees from New Mexico:
+
+```haskell
+λ> printEmployees (employees Map.\\ employeesFrom NewMexico employees)
+521-01-8756: Mary Jones
+522-43-9862: John Doe
+524-34-1234: Bob Jones
+527-75-1035: Julia Bloom
+```
+
+Some common manipulations on `Set`s:
+
+```haskell
+λ> let fourCorners = Set.fromList [Arizona, NewMexico, Colorado, Utah]
+λ> let borderStates = Set.fromList [California, Arizona, NewMexico, Texas]
+λ> Set.union fourCorners borderStates
+fromList [Arizona,California,Colorado,NewMexico,Texas,Utah]
+λ> Set.intersection fourCorners borderStates
+fromList [Arizona,NewMexico]
+λ> Set.difference fourCorners borderStates
+fromList [Colorado,Utah]
+λ> Set.difference borderStates fourCorners
+fromList [California,Texas]
+λ> let symmetricDifference a b = Set.union a b Set.\\ Set.intersection a b
+λ> symmetricDifference fourCorners borderStates
+fromList [California,Colorado,Texas,Utah]
+```
+
 
 ### Conversion
 
@@ -508,16 +540,39 @@ stateSocialsMap' = Map.mapMaybe nonEmptyElems . allStateEmployeesMap
                           | otherwise = Just $ Map.keysSet sem
 ```
 
+### Subset and Submap.
 
-
-
-Above function can be used to find employees from a particular state, as well
-as all employees that are from all other states but the supplied state:
+Here is how we would check if we are missing a `State` from our `Map`:
 
 ```haskell
-λ> printEmployees (employees Map.\\ employeesFrom NewMexico employees)
-521-01-8756: Mary Jones
-522-43-9862: John Doe
-524-34-1234: Bob Jones
-527-75-1035: Julia Bloom
+λ> Set.isProperSubsetOf (Map.keysSet $ allStateEmployeesMap employees) allStates
+False
+λ> Set.isProperSubsetOf (Map.keysSet $ statePersonsMap employees) allStates
+True
+λ> Map.isProperSubmapOfBy (const . const True) (allStateEmployeesMap employees) statePrefixMap
+False
+λ> Map.isProperSubmapOfBy (const . const True) (statePersonsMap employees) statePrefixMap
+True
 ```
+
+
+## Conclusion
+
+In this tutorial we looked at very useful `Map` and `Set` containers, but there
+are plenty of other packages that provide implementations for all sorts of data
+structures that might be a better match your needs. In particular, if keys and
+elements for `Map` and `Set` respectively are hashable and their ordering is of
+no importance, it is recommended to use `HashMap` and `HashSet`
+from
+[unordered-containers](https://www.stackage.org/lts/package/unordered-containers) instead.
+Above package provides very similar interface to one from [containers](https://www.stackage.org/lts/package/containers) package, has
+[much smaller memory impact](https://www.fpcomplete.com/blog/2016/05/weigh-package#containers-vs-unordered-containers) and
+better performance.
+
+Here is a list of some packages and tutorials for them that can help you choose and
+get started with an appropiate data structure for your problem:
+
+* [vector](https://www.stackage.org/lts/package/vector):
+  * [Efficient Packed-Memory Data Representations - vector library](https://haskell-lang.org/library/vector)
+* [bytestring](https://www.stackage.org/lts/package/bytestring) and [text](https://www.stackage.org/lts/package/text):
+  * [String Types](https://haskell-lang.org/tutorial/string-types)
