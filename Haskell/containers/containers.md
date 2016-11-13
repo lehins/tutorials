@@ -9,9 +9,9 @@ can use for the problem at hand?
 Haskell is a pure functional language, thus, by it's nature, most of the
 available containers are immutable and, without a doubt, the most common one is
 a list `[a]`. Certainly, it is not efficiency that made it so popular, but
-rather its simplicity, consequently, it is also the first data structure,
-that you get introduced to while learning Haskell. Although, lists are perfectly
-suitable for some problems, more often than not, we need something that is more
+rather its simplicity, consequently, it is also the first data structure, that
+you get introduced to while learning Haskell. Although, lists are perfectly
+suitable for some problems, more often than not, we need something that is
 tailored to how we are trying to use our data.
 
 Here are some situations
@@ -34,14 +34,14 @@ used containers used in programming:
 `Map` is one of the most interesting and commonly used abstractions from the
 package, so most of the examples will be based on it. Moreover, interface
 provided for `Map`, `IntMap`, `Set` and `IntSet` is very similar, so
-corresponding examples can be easily derived for all of the above.
+analogous examples can be easily derived for all of the above.
 
 ### Setup a problem.
 
 One of the common mappings in real life, that we encounter, is a person's
 identification number, that maps a unique number to an actual human
-being. Social Security Number (SSN) is normally used for that purpose in the
-USA and despite that it is not totally unique, for demonstration purpose, we will
+being. Social Security Number (SSN) is what normally used for that purpose in the
+USA and despite that it is not totally unique, for demonstration purpose, we can
 assume it actually is. Although it is a 9 digit number and using `IntMap` would
 be more efficient, it does have some structure to it and we will take advantage
 of it, so we will use a custom data type `SSN` as a key.
@@ -77,14 +77,16 @@ data Person = Person
 
 instance Show Person where
   show (Person fName lName g) = fName ++ ' ':lName ++ " (" ++ show g ++ ")"
+  
+type Employees = Map.Map SSN Person
 ```
 
-I would like to stress how important `Eq` and `Ord` instances of a key actually
-are. Because they are used for underlying representation of a `Map`, providing
-incomplete or incorrect instances for these classes will lead to some strange
-behavior of your data mappings, therefore, either make sure you know what you are
-doing when creating custom instances, or use derived instances, as they are
-always safe.
+I would like to stress how important `Eq` and `Ord` instances of a data type
+used as a key actually are. Because they are essential for underlying representation
+of a `Map`, providing incomplete or incorrect instances for these classes will
+lead to some strange behavior of your data mappings, therefore, either make sure
+you know what you are doing when creating custom instances, or use derived
+instances, as they are always safe.
 
 Because Social Security Numbers have a specific structure we would like to
 enforce it by providing a constructor function that performs certain validations.
@@ -98,17 +100,11 @@ mkSSN p i s
   | otherwise = SSN p i s
 ```
 
-Moreover, until a few years ago, Social Security Number prefix (also known as
-Area Number) could tell you the actual state a number was issued in, which, for
-the sake of example, we will pretend is still the case and abuse that pattern.
-
 ### Converting maps
 
 Let's go ahead and create our mapping of employees using `Map.fromList`:
 
 ```haskell
-type Employees = Map.Map SSN Person
-
 employees :: Employees
 employees =
   Map.fromList
@@ -189,7 +185,7 @@ It would be useful to present our `Employees` in a user friendly format, so
 let's define a `showMap` function by converting our `Map` to a printable string:
 
 ```haskell
-showMap :: Employees -> String
+showMap :: (Show k, Show v) => Map.Map k v -> String
 showMap = List.intercalate "\n" . map show . Map.toList
 ```
 
@@ -207,8 +203,8 @@ Let's give it a try:
 ```
 
 As you can see, all employees are sorted by their SSN, so conversion to a list is
-done in ascending order, but it is worth noting, that if it is required to
-guarantee this behavior `Map.toAscList` should be used instead, or
+done in ascending order, but it is worth noting, that if there is a desire to
+guarantee this behavior, `Map.toAscList` should be used instead, or
 `Map.toDescList` to get it in a reverse order.
 
 Conversion is nice an simple, but how about using folding in a way that is
@@ -246,7 +242,7 @@ Now that looks slightly better:
 585-11-1234: William Smith (Male)
 ```
 
-__Exercise__: Using the fact that List is an instance of `Monoid`, implement
+__Exercise__: Using the fact that List is an instance of `Monoid` and implement
 `showEmployees` with the help of `Map.foldMapWithKey`.
 
 __Exercise__: Implement `showEmployeesReversed` using `Map.foldlWithKey`
@@ -414,7 +410,7 @@ that all States will be unique and in a proper ascending order, thus we are safe
 to use `Set.fromDistinctAscList` instead of a less efficient `Set.fromList` or even
 `Set.fromAscList`.
 
-### Set mathematics
+### Binary operations
 
 Exclude employees from New Mexico:
 
@@ -452,9 +448,7 @@ Map a State to a set of SSN prefixes that correspond to it:
 ```haskell
 statePrefixMap :: Map.Map State (Set.Set Int)
 statePrefixMap =
-  Map.fromSet
-    (Set.fromList . concatMap (uncurry enumFromTo) . (statePrefixRangeMap Map.!))
-    allStates
+  Map.fromSet (Set.fromList . concatMap (uncurry enumFromTo) . (statePrefixRangeMap Map.!)) allStates
 ```
 
 Inverse of what we have above: Map from prefix to `State`:
@@ -473,12 +467,12 @@ Using above Map we can list all employees we have per state:
 -- | Transform `Map` to another `Map`
 statePersonsMap :: Employees -> Map.Map State [Person]
 statePersonsMap = Map.foldlWithKey updateState Map.empty
-  where updateState ppsm ssn p =
+  where updateState sm ssn p =
           case Map.lookup (ssnPrefix ssn) prefixStateMap of
-            Nothing    -> ppsm
-            Just state -> Map.alter (consPerson p) state ppsm
+            Nothing    -> sm
+            Just state -> Map.alter (consPerson p) state sm
         consPerson p Nothing = Just [p]
-        consPerson p (Just ps) = Just (p : ps)
+        consPerson p (Just ps) = Just (p:ps)
 ```
 
 And create a `Set` of all Social Security Numbers of our employees per State:
@@ -487,10 +481,10 @@ And create a `Set` of all Social Security Numbers of our employees per State:
 -- Transform `Map` to `Set` to `Map`
 stateSocialsMap :: Employees -> Map.Map State (Set.Set SSN)
 stateSocialsMap = Set.foldl updateState Map.empty . Map.keysSet
-  where updateState ppsm ssn =
+  where updateState sm ssn =
           case Map.lookup (ssnPrefix ssn) prefixStateMap of
-            Nothing    -> ppsm
-            Just state -> Map.alter (addSSN ssn) state ppsm
+            Nothing    -> sm
+            Just state -> Map.alter (addSSN ssn) state sm
         addSSN ssn Nothing = Just $ Set.singleton ssn
         addSSN ssn (Just ssnSet) = Just $ Set.insert ssn ssnSet
 ```
@@ -526,9 +520,9 @@ allStateEmployeesMap :: Employees -> Map.Map State Employees
 allStateEmployeesMap es = Map.fromSet (`employeesFrom` es) allStates
 ```
 
-Last function will produce undesired empty Maps of `Employees` for some states,
-but there is a reason behind it, it will help us demonstrate similarities between
-`Map.filter` and `Map.mapMaybe`:
+Calling `allStateEmployeesMap` will produce undesired empty Maps of `Employees`
+for some States, but there is a reason behind it, it will help us demonstrate
+similarities between `Map.filter` and `Map.mapMaybe`:
 
 ```haskell
 statePersonsMap' :: Employees -> Map.Map State [Person]
@@ -542,7 +536,8 @@ stateSocialsMap' = Map.mapMaybe nonEmptyElems . allStateEmployeesMap
 
 ### Subset and Submap.
 
-Here is an example of how we would check if we are missing a `State` from our `Map`:
+Here are two equivalent approaches of how we would check if we are missing a
+`State` from our `Map`:
 
 ```haskell
 λ> Set.isProperSubsetOf (Map.keysSet $ allStateEmployeesMap employees) allStates

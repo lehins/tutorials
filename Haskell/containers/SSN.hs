@@ -247,20 +247,20 @@ prefixStateMap = Map.foldlWithKey addPrefixes Map.empty statePrefixMap where
 
 statePersonsMap :: Employees -> Map.Map State [Person]
 statePersonsMap = Map.foldlWithKey updateState Map.empty
-  where updateState ppsm ssn p =
+  where updateState sm ssn p =
           case Map.lookup (ssnPrefix ssn) prefixStateMap of
-            Nothing    -> ppsm
-            Just state -> Map.alter (consPerson p) state ppsm
+            Nothing    -> sm
+            Just state -> Map.alter (consPerson p) state sm
         consPerson p Nothing = Just [p]
-        consPerson p (Just ps) = Just (p : ps)
+        consPerson p (Just ps) = Just (p:ps)
 
 
 stateSocialsMap :: Employees -> Map.Map State (Set.Set SSN)
 stateSocialsMap = Set.foldl updateState Map.empty . Map.keysSet
-  where updateState ppsm ssn =
+  where updateState sm ssn =
           case Map.lookup (ssnPrefix ssn) prefixStateMap of
-            Nothing    -> ppsm
-            Just state -> Map.alter (addSSN ssn) state ppsm
+            Nothing    -> sm
+            Just state -> Map.alter (addSSN ssn) state sm
         addSSN ssn Nothing = Just $ Set.singleton ssn
         addSSN ssn (Just ssnSet) = Just $ Set.insert ssn ssnSet
 
