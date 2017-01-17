@@ -1,10 +1,11 @@
 #!/usr/bin/env stack
--- stack --resolver 7.16 runhaskell --package QuickCheck
+-- stack --resolver lts-7.16 runhaskell --package QuickCheck --package primes
 {-# LANGUAGE FlexibleInstances #-}
 module Main where
 import Test.QuickCheck
 import Test.QuickCheck.Property
 import Data.List
+import Data.Numbers.Primes
 
 prop_RevRev :: Eq a => [a] -> Bool
 prop_RevRev xs = reverse (reverse xs) == xs
@@ -48,11 +49,6 @@ prop_Index_v4 (NonEmpty xs) =
 
 
 
--- prop_PrimeMult :: (Positive Integer) -> (Positive Integer) -> Property
--- prop_PrimeMult (Positive i) (Positive j) = 
-
-
-
 prop_Bogus :: Int -> Property
 prop_Bogus n = n == 17 ==> True
 
@@ -60,17 +56,82 @@ prop_Bogus2 :: Property
 prop_Bogus2 = forAll (return 17) $ \ n -> n == 17
 
 
+prop_PrimeSum_v0 :: (Positive Int) -> (Positive Int) -> Property
+prop_PrimeSum_v0 (Positive p) (Positive q) =
+  p > 2 && q > 2 && isPrime p && isPrime q ==>
+  collect (if p < q then (p, q) else (q, p)) $ even (p + q)
 
-data WithIndex a = WithIndex Int [a]
+
+prop_PrimeSum_v1 :: Int -> Int -> Property
+prop_PrimeSum_v1 p q =
+  p > 2 && q > 2 && isPrime p && isPrime q ==> even (p + q)
 
 
-instance Arbitrary a => Arbitrary (WithIndex a) where
+
+prop_PrimeSum_v1'' :: Int -> Int -> Property
+prop_PrimeSum_v1'' p q =
+  p > 2 && q > 2 && isPrime p && isPrime q ==>
+  collect (if p < q then (p, q) else (q, p)) $ even (p + q)
+
+prop_PrimeSum_v1' :: Int -> Int -> Property
+prop_PrimeSum_v1' p q =
+  p > 2 && q > 2 && isPrime p && isPrime q ==>
+  classify (p < 20 && q < 20) "trivial" $ even (p + q)
+
+
+prop_PrimeSum_v2 :: (Positive (Large Int)) -> (Positive (Large Int)) -> Property
+prop_PrimeSum_v2 (Positive (Large p)) (Positive (Large q)) =
+  p > 2 && q > 2 && isPrime p && isPrime q ==>
+  collect (if p < q then (p, q) else (q, p)) $ even (p + q)
+
+
+-- |
+-- λ> quickCheck prop_PrimeMult
+-- *** Gave up! Passed only 24 tests:
+-- 20% (3,7)
+-- 20% (3,5)
+--  8% (5,5)
+--  8% (3,3)
+--  8% (3,13)
+--  4% (7,7)
+
+prop_PrimeSum_v3 :: Property
+prop_PrimeSum_v3 =
+  forAll (choose (1, 1000)) $ \ i ->
+    forAll (choose (1, 1000)) $ \ j ->
+      let (p, q) = (primes !! i, primes !! j) in
+      collect (if p < q then (p, q) else (q, p)) $ even (p + q)
+
+
+newtype Prime a = Prime a deriving Show
+
+instance (Integral a, Arbitrary a) =>
+         Arbitrary (Prime a) where
   arbitrary = do
-    NonEmpty xs <- arbitrary
-    NonNegative n <- arbitrary
-    return $ WithIndex (n `mod` length xs) xs
+    x <- frequency [ (10, choose (0, 1000))
+                   , (5, choose (1001, 10000))
+                   , (1, choose (10001, 50000))
+                   ]
+    return $ Prime (primes !! x)
 
 
+prop_PrimeSum_v4 :: Prime Int -> Prime Int -> Property
+prop_PrimeSum_v4 (Prime p) (Prime q) =
+  p > 2 && q > 2 ==> classify (p < 1000 || q < 1000) "has small prime" $ even (p + q)
+
+
+instance Show (Int -> Char) where
+  show _ = "Function: (Int -> Char)"
+
+instance Show (Char -> Maybe Double) where
+  show _ = "Function: (Char -> Maybe Double)"
+
+
+prop_MapMap :: (Int -> Char) -> (Char -> Maybe Double) -> [Int] -> Bool
+prop_MapMap f g ls = map g (map f ls) == map (g . f) ls
+
+-- prop_FTH :: (Positive Int) -> Property
+-- prop_FTH (Positive n) = n > 1 ==> all isPrime $ primeFactors n
 
 main :: IO ()
 main = quickCheck prop_Index_v3

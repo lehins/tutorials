@@ -129,8 +129,8 @@ prop_Index_v1 xs n = xs !! n == head (drop n xs)
 ```
 
 Naturally, you can see a problem with that function, it cannot accept just any
-random `Int` to be used for indexing, and `quickCheck` quickly finds
-that problem for us:
+random `Int` to be used for indexing, and `quickCheck` quickly finds that
+problem for us and prints out violating input along with an error:
 
 ```haskell
 λ> quickCheck prop_Index_v1
@@ -193,44 +193,137 @@ forAll :: (Show a, Testable prop) => Gen a -> (a -> prop) -> Property
 There is a very subtle difference between the last two versions, namely `_v3`
 will discard tests that do not satisfy a precondition, while `_v4` will always
 generate a value for `n` that is safe for passing to index function. This is not
-important for this example, which is good, but this is not always the case, in
-particular, whenever precondition is too strict, QuickCheck might give up
-looking for valid tests:
+important for this example, which is good, but that is not always the
+case. Whenever precondition is too strict, QuickCheck might give up early
+looking for valid values for a test, but more importantly, it can give a false
+sence of validity, since most of the values it will find will be trivial
+ones.
+
+For instance, considering that every prime number larger than 2 is odd, we can
+easily derive a property that sum of any two prime numbers greater than 2 is
+even. Instead of writing inefficient routines for prime numbers we will
+use [primes](https://www.stackage.org/lts-7.16/package/primes-0.2.1.0)
+package. Here is a naive way to test that property:
 
 ```haskell
-λ> quickCheck $ \ n -> n == 17 ==> True
-*** Gave up! Passed only 5 tests.
-λ> quickCheck $ forAll (return 17) (== 17)
-+++ OK, passed 100 tests.
+prop_PrimeSum_v1 :: Int -> Int -> Property
+prop_PrimeSum_v1 p q =
+  p > 2 && q > 2 && isPrime p && isPrime q ==> even (p + q)
 ```
 
-Above examples are trivial, but they demonstrate the issue. What is more
-important, using `==>` can give a false sence of validity:
-
-
-```
--- TODO: example with `calssify`
-```
-
-
-
-
+As you can imagine it is not too oftent that a random number will be prime, thus
+affecting the quality of a test:
 
 ```haskell
-prop_sqrt :: NonNegative Double -> Bool
-prop_sqrt (NonNegative x)
-  | x == 0 || x == 1 = sqrtX == x
-  | x < 1 = sqrtX > 0 && sqrtX > x
-  | x > 1 = sqrtX > 0 && sqrtX < x
-  where
-    sqrtX = sqrt x
+λ> quickCheck prop_PrimeSum_v1
+*** Gave up! Passed only 26 tests.
 ```
 
+We can see that it only found 26 satisfiable tests, but how bad it actually is?
+An quick way to check the values accepted by a test is to classify them somehow:
+
+```haskell
+prop_PrimeSum_v1' :: Int -> Int -> Property
+prop_PrimeSum_v1' p q =
+  p > 2 && q > 2 && isPrime p && isPrime q ==>
+  classify (p < 20 && q < 20) "trivial" $ even (p + q)
+```
+
+```haskell
+λ> quickCheck prop_PrimeSum_v1'
+*** Gave up! Passed only 29 tests (96% trivial).
+λ> quickCheckWith stdArgs { maxSuccess = 500 } prop_PrimeSum_v1'
+*** Gave up! Passed only 94 tests (44% trivial).
+```
+
+We can see that the values this property was tested on are almost all trivial
+ones. Increasing number of tests was not much help. This is due to the fact,
+that by default, values generated for integers are pretty small, we could try to
+fix that, but this time we will also generate a histogram of unique pairs of
+discovered prime numbers:
+
+```haskell
+prop_PrimeSum_v2 :: (Positive (Large Int)) -> (Positive (Large Int)) -> Property
+prop_PrimeSum_v2 (Positive (Large p)) (Positive (Large q)) =
+  p > 2 && q > 2 && isPrime p && isPrime q ==>
+  collect (if p < q then (p, q) else (q, p)) $ even (p + q)
+```
+
+```haskell
+λ> quickCheck prop_PrimeSum_v2
+*** Gave up! Passed only 24 tests:
+16% (3,3)
+ 8% (11,41)
+ 4% (9413,24019)
+ 4% (93479,129917)
+ ...
+```
+
+This is better, there are less trivial values, but still, number of tests is far
+from satisfactory. It is also extremely inefficient to look for prime values
+that way, and for any really large value it will take forever to check
+its primality, it is much better to select from known prime values:
+
+```haskell
+prop_PrimeSum_v3 :: Property
+prop_PrimeSum_v3 =
+  forAll (choose (1, 1000)) $ \ i ->
+    forAll (choose (1, 1000)) $ \ j ->
+      let (p, q) = (primes !! i, primes !! j) in
+      collect (if p < q then (p, q) else (q, p)) $ even (p + q)
+```
+
+```haskell
+λ> quickCheck prop_PrimeSum_v3
++++ OK, passed 100 tests:
+ 1% (983,6473)
+ 1% (953,5059)
+ 1% (911,5471)
+ ...
+```
 
 ## Arbitrary
 
+
+If for some reason we needed prime values for many tests, it would be a burden
+to generate them this way for each property. Solution is to write an instance
+for `Arbitrary`:
+
+```haskell
+newtype Prime a = Prime a deriving Show
+
+instance (Integral a, Arbitrary a) => Arbitrary (Prime a) where
+  arbitrary = do
+    x <- frequency [ (10, choose (0, 1000))
+                   , (5, choose (1001, 10000))
+                   , (1, choose (10001, 50000))
+                   ]
+    return $ Prime (primes !! x)
+```
+
+Calculating large prime numbers is pretty expensive, so we could simply use
+`choose (0, 1000)`, similarly to how it was done in `prop_PrimeSum_v3`, but
+there is no reason why we should exclude generating random large prime numbers
+completely, instead we can specify a custom distribution by using `frequency`.
+
+Now writing `prop_PrimeSum` is a peice of cake:
+
+```haskell
+prop_PrimeSum :: Prime Int -> Prime Int -> Property
+prop_PrimeSum (Prime p) (Prime q) =
+  p > 2 && q > 2 ==> classify (p < 1000 || q < 1000) "has small prime" $ even (p + q)
+```
+
+```haskell
+λ> quickCheck prop_PrimeSum
++++ OK, passed 100 tests (21% has small prime).
+```
+
+## CoArbitrary
+
+
 There are quite a few instances of `Arbitrary`, many common data types from
-`base` are, but the most interesting one is a function:
+`base` are, but the most peculiar one is a function:
 
 ```
 λ> :i Arbitrary
@@ -242,8 +335,23 @@ instance [safe] (CoArbitrary a, Arbitrary b) => Arbitrary (a -> b)
 ...
 ```
 
+That's right, QuickCheck can even generate functions for us! One restriction is
+that an argument to the function is an instance of `CoArbitrary`, which also
+means functions of any arity can be generated. Another caviat is that we need an
+instance of `Show` for functions, which is not a standart practice, but
+sometimes is anavoidable.
 
-## CoArbitrary
+
+```haskell
+instance Show (Int -> Char) where
+  show _ = "Function: (Int -> Char)"
+
+instance Show (Char -> Maybe Double) where
+  show _ = "Function: (Char -> Maybe Double)"
+
+prop_MapMap :: (Int -> Char) -> (Char -> Maybe Double) -> [Int] -> Bool
+prop_MapMap f g ls = map g (map f ls) == map (g . f) ls
+```
 
 
 ## HSpec
