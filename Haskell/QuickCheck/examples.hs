@@ -1,5 +1,6 @@
 #!/usr/bin/env stack
--- stack runhaskell --resolver 2.22 --package QuickCheck
+-- stack --resolver 7.16 runhaskell --package QuickCheck
+{-# LANGUAGE FlexibleInstances #-}
 module Main where
 import Test.QuickCheck
 import Test.QuickCheck.Property
@@ -29,29 +30,46 @@ prop_sqrt (NonNegative x)
 
 
 prop_Index_v1 :: [Integer] -> Int -> Bool
-prop_Index_v1 xs n = (xs !! n) == head (drop n xs)
+prop_Index_v1 xs n = xs !! n == head (drop n xs)
 
 prop_Index_v2 :: (NonEmptyList Integer) -> NonNegative Int -> Bool
-prop_Index_v2 (NonEmpty xs) (NonNegative n) = (xs !! n) == head (drop n xs)
+prop_Index_v2 (NonEmpty xs) (NonNegative n) = xs !! n == head (drop n xs)
 
 
 
 prop_Index_v3 :: (NonEmptyList Integer) -> NonNegative Int -> Property
-prop_Index_v3 (NonEmpty xs) (NonNegative n) = n < length xs ==> (xs !! n) == head (drop n xs)
+prop_Index_v3 (NonEmpty xs) (NonNegative n) = n < length xs ==> xs !! n == head (drop n xs)
 
 
 
+prop_Index_v4 :: (NonEmptyList Integer) -> Property
+prop_Index_v4 (NonEmpty xs) =
+  forAll (choose (0, length xs-1)) $ \n -> xs !! n == head (drop n xs)
 
 
-split c xs = xs' : if null xs'' then [] else split c (tail xs'')
-    where xs' = takeWhile (/=c) xs
-          xs''= dropWhile (/=c) xs
 
-unsplit :: Char -> [String] -> String
-unsplit c = concat . intersperse [c]
+-- prop_PrimeMult :: (Positive Integer) -> (Positive Integer) -> Property
+-- prop_PrimeMult (Positive i) (Positive j) = 
 
 
-prop_split_inv xs = forAll (elements xs) $ \c -> (unsplit c (split c xs) == xs)
+
+prop_Bogus :: Int -> Property
+prop_Bogus n = n == 17 ==> True
+
+prop_Bogus2 :: Property
+prop_Bogus2 = forAll (return 17) $ \ n -> n == 17
+
+
+
+data WithIndex a = WithIndex Int [a]
+
+
+instance Arbitrary a => Arbitrary (WithIndex a) where
+  arbitrary = do
+    NonEmpty xs <- arbitrary
+    NonNegative n <- arbitrary
+    return $ WithIndex (n `mod` length xs) xs
+
 
 
 main :: IO ()
