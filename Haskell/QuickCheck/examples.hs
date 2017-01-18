@@ -4,7 +4,6 @@
 module Main where
 import Test.Hspec
 import Test.QuickCheck
-import Test.QuickCheck.Property
 import Data.List
 import Data.Numbers.Primes
 
@@ -76,8 +75,8 @@ prop_Index_v4 (NonEmpty xs) =
 
 
 
-prop_FTA :: (Positive Int) -> Bool
-prop_FTA (Positive n) = isPrime n || all isPrime (primeFactors n)
+prop_PrimeFactors :: (Positive Int) -> Bool
+prop_PrimeFactors (Positive n) = isPrime n || all isPrime (primeFactors n)
 
 
 prop_PrimeSum_v0 :: (Positive Int) -> (Positive Int) -> Property
@@ -176,7 +175,7 @@ main = hspec $ do
        it "emptyIndex" $ shouldThrow (return $! ([] !! 0)) anyException
        it "emptyIndex" $ shouldBe (([1,2,3] !! 1)) 2
   describe "Prime Numbers" $
-    do it "prop_FTA" $ property prop_FTA
+    do it "prop_PrimeFactors" $ property prop_PrimeFactors
        it "prop_PrimeSum_v3" $ property prop_PrimeSum_v3
        it "prop_PrimeSum_v4" $ property prop_PrimeSum_v4
   describe "High Order" $

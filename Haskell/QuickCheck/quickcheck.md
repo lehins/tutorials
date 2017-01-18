@@ -91,7 +91,7 @@ prop_Sqrt x
     sqrtX = sqrt x
 ```
 
-Now, this is great, but how did we just passed various functions with different
+Now, this is great, but how did we just pass various functions with different
 number of arguments of different types to `quickCheck`, and how did it know what
 to do with them? Let's look at it's type signature:
 
@@ -222,7 +222,7 @@ There is a very subtle difference between the last two versions, namely `_v3`
 will discard tests that do not satisfy a precondition, while `_v4` will always
 generate a value for `n` that is safe for passing to index function. This is not
 important for this example, which is good, but that is not always the
-case. Whenever precondition is too strict, QuickCheck might give up early
+case. Whenever precondition is too strict, QuickCheck might give up early while
 looking for valid values for a test, but more importantly, it can give a false
 sence of validity, since most of the values that it will find could be trivial
 ones.
@@ -233,11 +233,12 @@ ones.
 For this section we will use prime numbers in our examples, but rather than
 reinventing the wheel and writing functions for prime numbers ourselves we will
 use [primes](https://www.stackage.org/lts-7.16/package/primes-0.2.1.0) package.
-Just for fun let's right a property for Fundamental Theorem of Arithmetic:
+Just for fun let's right a property for `primeFactors`, which is based on
+Fundamental Theorem of Arithmetic:
 
 ```haskell
-prop_FTA :: (Positive Int) -> Bool
-prop_FTA (Positive n) = isPrime n || all isPrime (primeFactors n)
+prop_PrimeFactors :: (Positive Int) -> Bool
+prop_PrimeFactors (Positive n) = isPrime n || all isPrime (primeFactors n)
 ```
 
 That was incredibly easy and is almost a direct translation of a theorem
@@ -259,9 +260,9 @@ certainly will affect the quality of this test:
 *** Gave up! Passed only 26 tests.
 ```
 
-We can see that it only found 26 satisfiable tests out of a 1000 generated,
-that's bad, but how bad passed test actually are? A quick way to check the values
-accepted by a test is to classify them somehow:
+It only found 26 satisfiable tests out of a 1000 generated, that's bad, but how
+bad passed test actually are? An easy way to check the values accepted by a test
+is to classify them by some shared traits:
 
 ```haskell
 prop_PrimeSum_v1' :: Int -> Int -> Property
@@ -277,11 +278,10 @@ prop_PrimeSum_v1' p q =
 *** Gave up! Passed only 94 tests (44% trivial).
 ```
 
-We can see that values this property was tested on are almost all trivial
-ones. Increasing number of tests was not much help. This is due to the fact,
-that by default, values generated for integers are pretty small, we could try to
-fix that, but this time we will also generate a histogram of unique pairs of
-discovered prime numbers:
+Almost all values this property was tested on are in fact trivial ones.
+Increasing number of tests was not much of a help, because, by default, values
+generated for integers are pretty small, we could try to fix that, but this time
+we will also generate a histogram of unique pairs of discovered prime numbers:
 
 ```haskell
 prop_PrimeSum_v2 :: (Positive (Large Int)) -> (Positive (Large Int)) -> Property
@@ -302,8 +302,9 @@ prop_PrimeSum_v2 (Positive (Large p)) (Positive (Large q)) =
 
 This is better, there are less trivial values, but still, number of tests is far
 from satisfactory. It is also extremely inefficient to look for prime values
-that way, and for any really large value it will take forever to check its
-primality, it would be much better to simply choose from a list of prime values:
+that way, and, for any really large value passed to the property, it will take
+forever to check its primality. Much better approach would be to choose from a
+list of prime values, which we have readily availiable for us:
 
 ```haskell
 prop_PrimeSum_v3 :: Property
@@ -325,9 +326,9 @@ prop_PrimeSum_v3 =
 
 ## Arbitrary
 
-If for some reason we needed prime values for many tests, it would be a burden
-to generate them this way for each property. In such cases solution is to write
-an instance for `Arbitrary`:
+There could be a scenario where we needed prime values for many tests, then it
+would be a burden to generate them this way for each property. In such cases
+solution is always to write an instance for `Arbitrary`:
 
 ```haskell
 newtype Prime a = Prime a deriving Show
@@ -342,9 +343,10 @@ instance (Integral a, Arbitrary a) => Arbitrary (Prime a) where
 ```
 
 Calculating large prime numbers is pretty expensive, so we could simply use
-`choose (0, 1000)`, similarly to how it was done in `prop_PrimeSum_v3`, but
-there is no reason why we should exclude generating random large prime numbers
-completely, instead we can specify a custom distribution by using `frequency`.
+something like `choose (0, 1000)`, similarly to how it was done in
+`prop_PrimeSum_v3`, but there is no reason why we should exclude generating
+large prime numbers completely, instead, we can reduce their chance by
+describing a custom distribution with `frequency` function.
 
 Now writing `prop_PrimeSum` is a peice of cake:
 
@@ -379,9 +381,10 @@ That's right, QuickCheck can even generate functions for us! One of restrictions
 is that an argument to the function is an instance of `CoArbitrary`, which also
 has instance for a function, consequently functions of any arity can be
 generated. Another caviat is that we need an instance of `Show` for functions,
-which is not a standart practice in Haskell, and wraping a function in
-a `newtype` would be more appropriate . This cool feature allows us to easily
-write properties for higher order functions:
+which is not a standart practice in Haskell, and wraping a function in a
+`newtype` would be more appropriate. For clarity we will opt out from this
+suggestion and insterad demostrate this cool feature in action. One huge benefit
+is, that it allows us to easily write properties for higher order functions:
 
 
 ```haskell
@@ -397,21 +400,28 @@ prop_MapMap f g xs = map g (map f xs) == map (g . f) xs
 
 ## HSpec
 
-One thing that programmers usually note when learning writing tests in Haskell
-is that there are situations when unit tests are invaluable, but QuickCheck does
-not provide an easy way to do that. QuickCheck's random testing is not a
-limitation, but rather is an invaluable feature of testing paradigm in Haskell.
-Regular style unit tests and other QA functionality (code coverage,
-continuous integration, etc.) can be done just as easy as they are done in any
-other modern language using specilized libraries. In fact, those libraries play
-beatifuly together and complement each other in many ways.
+First concern, that programmers usually raise when coming from other languages
+to Haskell, is that there are situations when unit tests are invaluable, but
+QuickCheck does not provide an easy way to do that. Bare in mind, QuickCheck's
+random testing is not a limitation, but rather is a priceless feature of
+testing paradigm in Haskell.  Regular style unit tests and other QA
+functionality (code coverage, continuous integration, etc.) can be done just as
+easy as they are done in any other modern language using specilized
+libraries. In fact, those libraries play beatifuly together and complement each
+other in many ways.
 
-Here is an example how we can
+Here is an example of how we can
 use [hspec](https://www.stackage.org/lts-7.16/package/hspec-2.2.4) to create a
 test suite containing all properties we have discussed so far, plus few extra
 unit tests for completeness of the picture.
 
 ```haskell
+module Main where
+import Test.Hspec
+import Test.QuickCheck
+
+...
+
 main :: IO ()
 main = hspec $ do
   describe "Reverse Properties" $
@@ -427,7 +437,7 @@ main = hspec $ do
        it "unit_emptyIndex" $ shouldThrow (return $! ([] !! 0)) anyException
        it "unit_properIndex" $ shouldBe (([1,2,3] !! 1)) 2
   describe "Prime Numbers" $
-    do it "prop_FTA" $ property prop_FTA
+    do it "prop_PrimeFactors" $ property prop_PrimeFactors
        it "prop_PrimeSum_v3" $ property prop_PrimeSum_v3
        it "prop_PrimeSum_v4" $ property prop_PrimeSum_v4
   describe "High Order" $
@@ -436,7 +446,23 @@ main = hspec $ do
 
 ## Conclusion
 
+All of the examples above describe tests for already existing functions, which
+have been around for a while and very unlikely contain any bugs.
+
+(Maybe) My goal was to show how to use QuickCheck library for testing, not how
+to write code with bugs and then attempt to remove them, you can surely do that
+on your own now.
 
 
 Writing tests doesn't have to be a chore, it can be fun. We certainly find it
 fun at FPComplete and will be happy to provide any consulting or development work.
+
+... More here
+
+<feedback-form
+    dest="consulting@fpcomplete.com"
+    button-text="Contact us for information on training"
+    subject="I'm interested in training by FP Complete"
+    message="I'd like to hear more about training from FP Complete"
+    submit-text="Contact me about FP Complete training"
+/>
