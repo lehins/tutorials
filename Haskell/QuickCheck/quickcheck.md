@@ -14,7 +14,7 @@ Haskell and later ported to other languages.
 
 ## Properties
 
-It seems that every tutorial on QuickCheck starts with the description of what a
+It seems that every tutorial on QuickCheck starts with a description of what a
 function property is by listing properties of `reverse` function. Not to break
 this tradition we'll do the same thing here:
 
@@ -28,14 +28,14 @@ reverse (xs ++ ys) == reverse ys ++ reverse xs
 
 These properties will hold for all finite lists with total values. Naturally,
 there are ways to prove them and there are even tools for Haskell, such as
-LiquidHaskell, that can help you with that. Proving correctness is not always
-possible, some properties are either too hard or impossible to prove, moreover,
-often we just want to check that they work on some inputs. One of the ways to do
-that is through writing some unit tests, but since it is not feasable to test
-all type of inputs exhaustively for most functions, we usually check some corner
-cases and possibly some other arbitrary values. Systematic generation of
-arbitrary input could be very helpful in that scenario, and that's were
-QuickCheck comes into play.
+LiquidHaskell, that can help you with that. Proving correctness of a program is
+not always possible, some properties are either too hard or impossible to prove,
+moreover, often we simply want to check if a function works on some inputs. One
+of the ways to do this is through writing unit tests, but since it is not
+feasable to test all possible inputs exhaustively for most functions, we usually
+check some corner cases and occasionally test other arbitrary values. Systematic
+generation of arbitrary input that was biased towards corner cases could be very
+helpful in that scenario, and that's were QuickCheck comes into play.
 
 ```haskell
 import Test.QuickCheck
@@ -58,13 +58,15 @@ We can load those properties into GHCi and run `quickCheck` on them:
 
 What just happened? QuickCheck called `prop_RevRev` and `prop_RevApp` 100 times
 each, with random lists as arguments and declared those tests as passing,
-because all calls resulted in `True`. Worth noting, that in reality, not only
-`prop_RevRev`, but both of those properties are polymorphic and `quickCheck`
-will be happy to work with such functions even if type signatures were inferred
-and it will run just fine in GHCi. On the other hand, while writing a test
-suite, we have to restrict the type signature to concrete types, such as `[Int]`
-or `Char`, otherwise typechecker will get confused. For example, this program
-will not compile:
+because all calls resulted in `True`. Far beyond what a common unit test could have done.
+
+Worth noting, that in reality, not only `prop_RevRev`, but both of those
+properties are polymorphic and `quickCheck` will be happy to work with such
+functions, even if type signatures were inferred, and it will run just fine in
+GHCi. On the other hand, while writing a test suite, we have to restrict the
+type signature for every property to concrete type, such as `[Int]` or `Char`,
+otherwise typechecker will get confused. For example, this program will not
+compile:
 
 ```haskell
 main :: IO ()
@@ -81,15 +83,15 @@ prop_PrefixSuffix xs n = isPrefixOf prefix xs &&
 
 prop_Sqrt :: Double -> Bool
 prop_Sqrt x
-  | x < 0 = isNaN sqrtX
+  | x < 0            = isNaN sqrtX
   | x == 0 || x == 1 = sqrtX == x
-  | x < 1 = sqrtX > 0 && sqrtX > x
-  | x > 1 = sqrtX > 0 && sqrtX < x
+  | x < 1            = sqrtX > x
+  | x > 1            = sqrtX > 0 && sqrtX < x
   where
     sqrtX = sqrt x
 ```
 
-Now this is great, but how did we just passed various functions with different
+Now, this is great, but how did we just passed various functions with different
 number of arguments of different types to `quickCheck`, and how did it know what
 to do with them? Let's look at it's type signature:
 
