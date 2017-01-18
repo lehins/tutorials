@@ -9,8 +9,10 @@ just as important as writing an application itself.
 Over the course of history buggy software have costed industry billions of
 dollars in damage and even lost human lives, so I cannot stress enough, how
 essential testing is for any project. In this post we will look at state of the
-art property testing library QuickCheck, which was originally invented in
-Haskell and later ported to other languages.
+art property testing
+library
+[QuickCheck](https://www.stackage.org/lts-7.16/package/QuickCheck-2.8.2), which
+was originally invented in Haskell and later ported to other languages.
 
 ## Properties
 
@@ -457,6 +459,7 @@ on your own now.
 Writing tests doesn't have to be a chore, it can be fun. We certainly find it
 fun at FPComplete and will be happy to provide any consulting or development work.
 
+
 ... More here
 
 <feedback-form
@@ -466,3 +469,11 @@ fun at FPComplete and will be happy to provide any consulting or development wor
     message="I'd like to hear more about training from FP Complete"
     submit-text="Contact me about FP Complete training"
 />
+
+
+
+.. links to papers:
+    * QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs
+    * Testing Monadic Code with QuickCheck
+.. link to school of haskell:
+    * [An introduction to QuickCheck testing](https://www.schoolofhaskell.com/user/pbv/an-introduction-to-quickcheck-testing)
