@@ -1,14 +1,22 @@
 # QuickCheck
 
-Testing is an essential part of any project, so in this post we will look at
-state of the art property testing library QuickCheck, which was originally
-invented in Haskell and later ported to many other languages.
+Haskell is an amazing language. With its extremely powerful type system and a
+pure functional paradigm it prevents programmers from introducing many kinds of
+bugs, that are notorious in other languages. Despite those powers, code is still
+written by humans, and bugs are inevitable, so writing quality test suites is
+just as important as writing an application itself.
+
+Over the course of history buggy software have costed industry billions of
+dollars in damage and even lost human lives, so I cannot stress enough, how
+essential testing is for any project. In this post we will look at state of the
+art property testing library QuickCheck, which was originally invented in
+Haskell and later ported to other languages.
 
 ## Properties
 
 It seems that every tutorial on QuickCheck starts with the description of what a
 function property is by listing properties of `reverse` function. Not to break
-this tradition we'll do the same here:
+this tradition we'll do the same thing here:
 
 ```haskell
 reverse [x] == [x]
@@ -18,13 +26,13 @@ reverse (reverse xs) == xs
 reverse (xs ++ ys) == reverse ys ++ reverse xs
 ```
 
-These properties hold for all finite lists with total values. Naturally, there
-are ways to prove them and there are even tools for Haskell, such as
+These properties will hold for all finite lists with total values. Naturally,
+there are ways to prove them and there are even tools for Haskell, such as
 LiquidHaskell, that can help you with that. Proving correctness is not always
 possible, some properties are either too hard or impossible to prove, moreover,
 often we just want to check that they work on some inputs. One of the ways to do
 that is through writing some unit tests, but since it is not feasable to test
-all type of inputs exhaustively for most functions, we usuall check some corner
+all type of inputs exhaustively for most functions, we usually check some corner
 cases and possibly some other arbitrary values. Systematic generation of
 arbitrary input could be very helpful in that scenario, and that's were
 QuickCheck comes into play.
@@ -63,7 +71,25 @@ main :: IO ()
 main = quickCheck (const True)
 ```
 
-Now this is great, but how did we just passed two functions with different
+For the sake of example let's write couple more self-explanatory properties:
+
+```haskell
+prop_PrefixSuffix :: [Int] -> Int -> Bool
+prop_PrefixSuffix xs n = isPrefixOf prefix xs &&
+                         isSuffixOf (reverse prefix) (reverse xs)
+  where prefix = take n xs
+
+prop_Sqrt :: Double -> Bool
+prop_Sqrt x
+  | x < 0 = isNaN sqrtX
+  | x == 0 || x == 1 = sqrtX == x
+  | x < 1 = sqrtX > 0 && sqrtX > x
+  | x > 1 = sqrtX > 0 && sqrtX < x
+  where
+    sqrtX = sqrt x
+```
+
+Now this is great, but how did we just passed various functions with different
 number of arguments of different types to `quickCheck`, and how did it know what
 to do with them? Let's look at it's type signature:
 
@@ -88,21 +114,21 @@ instance [safe] Testable Bool
 instance [safe] (Arbitrary a, Show a, Testable prop) => Testable (a -> prop)
 ```
 
-The last instance is for a function (`a -> prop`), that returns a `prop`, which,
+The last instance is for a function `(a -> prop)`, that returns a `prop`, which,
 in turn, must also be an instance of `Testable`. This magic trick of a recursive
 constraint for an instance definition allows `quickCheck` to test a function
 with any number of arguments, as long as each one of them is an instance of
 `Arbitrary` and `Show`. So here is a check list of requirements for writing a
 testable property:
 
-* Zero or more aruments, that are an instance of `Arbitrary`, which is used for
+* Zero or more aruments, which have an instance of `Arbitrary`, that is used for
   generating random input. More on that later.
-* Arguments must also be an instance of `Show`, so if a test fails it can print
-  the value, that actually triggered the failure.
+* Arguments must also be an instance of `Show`, so if a test fails, offending
+  value can be displayed back to a programmer.
 * Return value is either:
 
   * `True`/`False` - to indicate pass/fail of a test case.
-  * `Discard` - to skip the test case (eg. unimplemented test case).
+  * `Discard` - to skip the test case (eg. precondition fails).
   * `Result` - to customize pass/fail/discard test result behavior, collect
     extra information about the test outcome, provide callbacks and other
     advanced features.
@@ -113,7 +139,7 @@ testable property:
 * Start with `prop_` or `prop`, followed by the usual `camelCase`, but
   that is just a convention, not a requirement.
 * Has no side effects. Also not a requirement, but strongly suggested, since
-  referential transparency is lost with `IO` monad and test results can be
+  referential transparency is lost with `IO` and test results can be
   inconsistent between runs. At the same time there are capabilities for testing
   Monadic code, which we will not go into here.
 
@@ -140,7 +166,7 @@ problem for us and prints out violating input along with an error:
 ```
 
 Interestingly, if you try to run this example on any computer, there is a very
-good chance that it will give the same output, so it seems, that input to
+good chance that it will give exactly the same output, so it seems, that input to
 properties is not completely random. In fact, thanks to the function `sized`,
 the first input to our property will always be an empty list and an integer `0`,
 which tend to be really good corner cases to test for. In our case, though, `!!`
@@ -196,14 +222,26 @@ generate a value for `n` that is safe for passing to index function. This is not
 important for this example, which is good, but that is not always the
 case. Whenever precondition is too strict, QuickCheck might give up early
 looking for valid values for a test, but more importantly, it can give a false
-sence of validity, since most of the values it will find will be trivial
+sence of validity, since most of the values that it will find could be trivial
 ones.
 
-For instance, considering that every prime number larger than 2 is odd, we can
-easily derive a property that sum of any two prime numbers greater than 2 is
-even. Instead of writing inefficient routines for prime numbers we will
-use [primes](https://www.stackage.org/lts-7.16/package/primes-0.2.1.0)
-package. Here is a naive way to test that property:
+
+## Pitfalls
+
+For this section we will use prime numbers in our examples, but rather than
+reinventing the wheel and writing functions for prime numbers ourselves we will
+use [primes](https://www.stackage.org/lts-7.16/package/primes-0.2.1.0) package.
+Just for fun let's right a property for Fundamental Theorem of Arithmetic:
+
+```haskell
+prop_FTA :: (Positive Int) -> Bool
+prop_FTA (Positive n) = isPrime n || all isPrime (primeFactors n)
+```
+
+That was incredibly easy and is almost a direct translation of a theorem
+itself. Let's consider a fact that every prime number larger than 2 is
+odd, thus we can easily derive a property that sum of any two prime numbers
+greater than 2 is even. Here is a naive way to test that property:
 
 ```haskell
 prop_PrimeSum_v1 :: Int -> Int -> Property
@@ -211,16 +249,17 @@ prop_PrimeSum_v1 p q =
   p > 2 && q > 2 && isPrime p && isPrime q ==> even (p + q)
 ```
 
-As you can imagine it is not too oftent that a random number will be prime, thus
-affecting the quality of a test:
+As you can imagine it is not too often that a random number will be prime, this
+certainly will affect the quality of this test:
 
 ```haskell
 λ> quickCheck prop_PrimeSum_v1
 *** Gave up! Passed only 26 tests.
 ```
 
-We can see that it only found 26 satisfiable tests, but how bad it actually is?
-An quick way to check the values accepted by a test is to classify them somehow:
+We can see that it only found 26 satisfiable tests out of a 1000 generated,
+that's bad, but how bad passed test actually are? A quick way to check the values
+accepted by a test is to classify them somehow:
 
 ```haskell
 prop_PrimeSum_v1' :: Int -> Int -> Property
@@ -236,7 +275,7 @@ prop_PrimeSum_v1' p q =
 *** Gave up! Passed only 94 tests (44% trivial).
 ```
 
-We can see that the values this property was tested on are almost all trivial
+We can see that values this property was tested on are almost all trivial
 ones. Increasing number of tests was not much help. This is due to the fact,
 that by default, values generated for integers are pretty small, we could try to
 fix that, but this time we will also generate a histogram of unique pairs of
@@ -261,8 +300,8 @@ prop_PrimeSum_v2 (Positive (Large p)) (Positive (Large q)) =
 
 This is better, there are less trivial values, but still, number of tests is far
 from satisfactory. It is also extremely inefficient to look for prime values
-that way, and for any really large value it will take forever to check
-its primality, it is much better to select from known prime values:
+that way, and for any really large value it will take forever to check its
+primality, it would be much better to simply choose from a list of prime values:
 
 ```haskell
 prop_PrimeSum_v3 :: Property
@@ -284,10 +323,9 @@ prop_PrimeSum_v3 =
 
 ## Arbitrary
 
-
 If for some reason we needed prime values for many tests, it would be a burden
-to generate them this way for each property. Solution is to write an instance
-for `Arbitrary`:
+to generate them this way for each property. In such cases solution is to write
+an instance for `Arbitrary`:
 
 ```haskell
 newtype Prime a = Prime a deriving Show
@@ -309,13 +347,13 @@ completely, instead we can specify a custom distribution by using `frequency`.
 Now writing `prop_PrimeSum` is a peice of cake:
 
 ```haskell
-prop_PrimeSum :: Prime Int -> Prime Int -> Property
-prop_PrimeSum (Prime p) (Prime q) =
+prop_PrimeSum_v4 :: Prime Int -> Prime Int -> Property
+prop_PrimeSum_v4 (Prime p) (Prime q) =
   p > 2 && q > 2 ==> classify (p < 1000 || q < 1000) "has small prime" $ even (p + q)
 ```
 
 ```haskell
-λ> quickCheck prop_PrimeSum
+λ> quickCheck prop_PrimeSum_v4
 +++ OK, passed 100 tests (21% has small prime).
 ```
 
@@ -335,11 +373,13 @@ instance [safe] (CoArbitrary a, Arbitrary b) => Arbitrary (a -> b)
 ...
 ```
 
-That's right, QuickCheck can even generate functions for us! One restriction is
-that an argument to the function is an instance of `CoArbitrary`, which also
-means functions of any arity can be generated. Another caviat is that we need an
-instance of `Show` for functions, which is not a standart practice, but
-sometimes is anavoidable.
+That's right, QuickCheck can even generate functions for us! One of restrictions
+is that an argument to the function is an instance of `CoArbitrary`, which also
+has instance for a function, consequently functions of any arity can be
+generated. Another caviat is that we need an instance of `Show` for functions,
+which is not a standart practice in Haskell, and wraping a function in
+a `newtype` would be more appropriate . This cool feature allows us to easily
+write properties for higher order functions:
 
 
 ```haskell
@@ -350,11 +390,51 @@ instance Show (Char -> Maybe Double) where
   show _ = "Function: (Char -> Maybe Double)"
 
 prop_MapMap :: (Int -> Char) -> (Char -> Maybe Double) -> [Int] -> Bool
-prop_MapMap f g ls = map g (map f ls) == map (g . f) ls
+prop_MapMap f g xs = map g (map f xs) == map (g . f) xs
 ```
-
 
 ## HSpec
 
+One thing that programmers usually note when learning writing tests in Haskell
+is that there are situations when unit tests are invaluable, but QuickCheck does
+not provide an easy way to do that. QuickCheck's random testing is not a
+limitation, but rather is an invaluable feature of testing paradigm in Haskell.
+Regular style unit tests and other QA functionality (code coverage,
+continuous integration, etc.) can be done just as easy as they are done in any
+other modern language using specilized libraries. In fact, those libraries play
+beatifuly together and complement each other in many ways.
 
-## Bootstrap example
+Here is an example how we can
+use [hspec](https://www.stackage.org/lts-7.16/package/hspec-2.2.4) to create a
+test suite containing all properties we have discussed so far, plus few extra
+unit tests for completeness of the picture.
+
+```haskell
+main :: IO ()
+main = hspec $ do
+  describe "Reverse Properties" $
+    do it "prop_RevRev" $ property prop_RevRev
+       it "prop_RevApp" $ property prop_RevApp
+       it "prop_PrefixSuffix" $ property prop_PrefixSuffix
+  describe "Number Properties" $
+    do it "prop_Sqrt" $ property prop_Sqrt
+  describe "Index Properties" $
+    do it "prop_Index_v3" $ property prop_Index_v3
+       it "prop_Index_v4" $ property prop_Index_v4
+       it "unit_negativeIndex" $ shouldThrow (return $! ([1,2,3] !! (-1))) anyException
+       it "unit_emptyIndex" $ shouldThrow (return $! ([] !! 0)) anyException
+       it "unit_properIndex" $ shouldBe (([1,2,3] !! 1)) 2
+  describe "Prime Numbers" $
+    do it "prop_FTA" $ property prop_FTA
+       it "prop_PrimeSum_v3" $ property prop_PrimeSum_v3
+       it "prop_PrimeSum_v4" $ property prop_PrimeSum_v4
+  describe "High Order" $
+    do it "prop_MapMap" $ property prop_MapMap
+```
+
+## Conclusion
+
+
+
+Writing tests doesn't have to be a chore, it can be fun. We certainly find it
+fun at FPComplete and will be happy to provide any consulting or development work.

@@ -1,30 +1,35 @@
 #!/usr/bin/env stack
--- stack --resolver lts-7.16 runhaskell --package QuickCheck --package primes
+-- stack --resolver lts-7.16 runhaskell --package QuickCheck --package hspec --package primes
 {-# LANGUAGE FlexibleInstances #-}
 module Main where
+import Test.Hspec
 import Test.QuickCheck
 import Test.QuickCheck.Property
 import Data.List
 import Data.Numbers.Primes
 
-prop_RevRev :: Eq a => [a] -> Bool
+prop_RevRevPoly :: Eq a => [a] -> Bool
+prop_RevRevPoly xs = reverse (reverse xs) == xs
+
+prop_RevRev :: [Char] -> Bool
 prop_RevRev xs = reverse (reverse xs) == xs
 
 prop_RevApp :: [Int] -> [Int] -> Bool
 prop_RevApp xs ys = reverse (xs ++ ys) == reverse ys ++ reverse xs
 
 
-prop_PrefixSuffix :: Eq a => [a] -> Int -> Bool
+prop_PrefixSuffix :: [Int] -> Int -> Bool
 prop_PrefixSuffix xs n = isPrefixOf prefix xs &&
                          isSuffixOf (reverse prefix) (reverse xs)
   where prefix = take n xs
 
 
-prop_sqrt :: NonNegative Double -> Bool
-prop_sqrt (NonNegative x)
+prop_Sqrt :: Double -> Bool
+prop_Sqrt x
+  | x < 0            = isNaN sqrtX
   | x == 0 || x == 1 = sqrtX == x
-  | x < 1 = sqrtX > 0 && sqrtX > x
-  | x > 1 = sqrtX > 0 && sqrtX < x
+  | x < 1            = sqrtX > x
+  | x > 1            = sqrtX > 0 && sqrtX < x
   where
     sqrtX = sqrt x
 
@@ -49,29 +54,45 @@ prop_Index_v4 (NonEmpty xs) =
 
 
 
-prop_Bogus :: Int -> Property
-prop_Bogus n = n == 17 ==> True
+-- rpm :: Integral a => a -> a -> a
+-- rpm x y
+--   | x == 0 || y == 0 = 0
+--   | x < 0  || y < 0  = error "Cannot operate on negative numbers"
+--   | otherwise        = go x y 0
+--   where
+--     go 1 b acc = b + acc
+--     go a b acc = go (a `div` 2) (b + b) (if a `mod` 2 == 1 then (acc + b) else acc)
 
-prop_Bogus2 :: Property
-prop_Bogus2 = forAll (return 17) $ \ n -> n == 17
+
+-- prop_RPM_NegX :: Positive Int -> Int -> Property
+-- prop_RPM_NegX (Positive x) y = expectFailure (rpm (-x) y == (-x) * y)
+
+-- prop_RPM_NegX :: Positive Int -> Int -> Property
+-- prop_RPM_NegX (Positive x) y = expectFailure (rpm (-x) y == (-x) * y)
+
+-- prop_RPM_neg :: Int -> Int -> Property
+-- prop_RPM x y | x < 0  || y < 0 = expectFailure (rpm x y == x * y)
+--              | otherwise = within 500000 (rpm x y == x * y)
+
+
+
+prop_FTA :: (Positive Int) -> Bool
+prop_FTA (Positive n) = isPrime n || all isPrime (primeFactors n)
 
 
 prop_PrimeSum_v0 :: (Positive Int) -> (Positive Int) -> Property
 prop_PrimeSum_v0 (Positive p) (Positive q) =
-  p > 2 && q > 2 && isPrime p && isPrime q ==>
-  collect (if p < q then (p, q) else (q, p)) $ even (p + q)
+  classify precondition "precond" $
+  precondition ==>
+  even (p + q)
+  where
+    precondition = p > 2 && q > 2 && isPrime p && isPrime q
 
 
 prop_PrimeSum_v1 :: Int -> Int -> Property
 prop_PrimeSum_v1 p q =
   p > 2 && q > 2 && isPrime p && isPrime q ==> even (p + q)
 
-
-
-prop_PrimeSum_v1'' :: Int -> Int -> Property
-prop_PrimeSum_v1'' p q =
-  p > 2 && q > 2 && isPrime p && isPrime q ==>
-  collect (if p < q then (p, q) else (q, p)) $ even (p + q)
 
 prop_PrimeSum_v1' :: Int -> Int -> Property
 prop_PrimeSum_v1' p q =
@@ -84,16 +105,6 @@ prop_PrimeSum_v2 (Positive (Large p)) (Positive (Large q)) =
   p > 2 && q > 2 && isPrime p && isPrime q ==>
   collect (if p < q then (p, q) else (q, p)) $ even (p + q)
 
-
--- |
--- λ> quickCheck prop_PrimeMult
--- *** Gave up! Passed only 24 tests:
--- 20% (3,7)
--- 20% (3,5)
---  8% (5,5)
---  8% (3,3)
---  8% (3,13)
---  4% (7,7)
 
 prop_PrimeSum_v3 :: Property
 prop_PrimeSum_v3 =
@@ -128,10 +139,47 @@ instance Show (Char -> Maybe Double) where
 
 
 prop_MapMap :: (Int -> Char) -> (Char -> Maybe Double) -> [Int] -> Bool
-prop_MapMap f g ls = map g (map f ls) == map (g . f) ls
+prop_MapMap f g xs = map g (map f xs) == map (g . f) xs
 
--- prop_FTH :: (Positive Int) -> Property
--- prop_FTH (Positive n) = n > 1 ==> all isPrime $ primeFactors n
+
+
+-- Proper way to generate functions.
+
+newtype TestFunction a b = TestFunction (a -> b)
+
+instance (CoArbitrary a, Arbitrary b) => Arbitrary (TestFunction a b) where
+  arbitrary = TestFunction <$> arbitrary
+
+instance Show (TestFunction Int Char) where
+  show _ = "Function: (Int -> Char)"
+
+instance Show (TestFunction Char (Maybe Double)) where
+  show _ = "Function: (Char -> Maybe Double)"
+
+
+prop_MapMap' :: TestFunction Int Char -> TestFunction Char (Maybe Double) -> [Int] -> Bool
+prop_MapMap' (TestFunction f) (TestFunction g) xs = map g (map f xs) == map (g . f) xs
+
 
 main :: IO ()
-main = quickCheck prop_Index_v3
+main = hspec $ do
+  describe "Reverse Properties" $
+    do it "prop_RevRev" $ property prop_RevRev
+       it "prop_RevApp" $ property prop_RevApp
+       it "prop_PrefixSuffix" $ property prop_PrefixSuffix
+  describe "Number Properties" $
+    do it "prop_Sqrt" $ property prop_Sqrt
+  describe "Index Properties" $
+    do it "prop_Index_v3" $ property prop_Index_v3
+       it "prop_Index_v4" $ property prop_Index_v4
+       it "negativeIndex" $ shouldThrow (return $! ([1,2,3] !! (-1))) anyException
+       it "emptyIndex" $ shouldThrow (return $! ([] !! 0)) anyException
+       it "emptyIndex" $ shouldBe (([1,2,3] !! 1)) 2
+  describe "Prime Numbers" $
+    do it "prop_FTA" $ property prop_FTA
+       it "prop_PrimeSum_v3" $ property prop_PrimeSum_v3
+       it "prop_PrimeSum_v4" $ property prop_PrimeSum_v4
+  describe "High Order" $
+    do it "prop_MapMap" $ property prop_MapMap
+       
+
