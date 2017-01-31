@@ -1,4 +1,4 @@
-# QuickCheck
+# QuickCheck and Magic of Testing
 
 Haskell is an amazing language. With its extremely powerful type system and a
 pure functional paradigm it prevents programmers from introducing many kinds of
