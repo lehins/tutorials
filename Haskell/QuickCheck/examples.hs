@@ -1,5 +1,5 @@
 #!/usr/bin/env stack
--- stack --resolver lts-7.16 runhaskell --package QuickCheck --package hspec --package primes
+-- stack --resolver lts-7.16 runghc --package QuickCheck --package hspec --package primes
 {-# LANGUAGE FlexibleInstances #-}
 module Main where
 import Test.Hspec
