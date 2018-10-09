@@ -93,7 +93,7 @@ $ git clone git@gitlab.com:user-or-group/repo-name.git
 ```
 
 Above command will use `ssh` to communicate with gitlab and make a local copy of the repo into the
-`./repo-name` folder.
+`./repo-name` folder. But it won't work just yet, we need to setup authentication with ssh.
 
 If instead you had used `https://gitlab.com/user-or-group/repo-name.git` or
 `https://username:access_token@gitlab.com/user-or-group/repo-name.git` then the earlier mentioned
@@ -112,14 +112,27 @@ In order to use ssh method for authentication we need to do three things:
 
 * [Generate a private/public keypair](https://docs.gitlab.com/ee/ssh/#generating-a-new-ssh-key-pair) (or use an existing one if such is available):
 
-* [Add ssh key to `ssh-agent`](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/#adding-your-ssh-key-to-the-ssh-agent)
+```shell
+$ ssh-keygen -o -t rsa -C "your.email@example.com" -b 4096
+```
 
-* Upload contents of a public key (if default name was used it's gonna be `~/.ssh/id_rsa.pub`) to
+* [Add ssh key to `ssh-agent`](https://docs.gitlab.com/ee/ssh/#working-with-non-default-ssh-key-pair-paths). Important is to make sure agent is running. Also adding the key will prevent it from asking for a password every time.
+
+```shell
+$ eval $(ssh-agent -s)
+$ ssh-add ~/.ssh/id_rsa
+```
+
+* [Upload contents of a public key](https://docs.gitlab.com/ee/ssh/#adding-a-ssh-key-to-your-gitlab-account) (if default name was used it's gonna be `~/.ssh/id_rsa.pub`) to
   Gitlab at https://gitlab.com/profile/keys
 
 
 At this point we should be able to access our private repo with git.
 
+```shell
+$ git clone git@gitlab.com:user-or-group/repo-name.git
+$ cd repo-name
+```
 
 ## Repository structure
 
@@ -127,7 +140,20 @@ At this point we should be able to access our private repo with git.
 
 A commit is one of the most important concepts in git. It records the changes performed together
 with a message, authors, and the `sha` for the parent commits in the repository. In it's core git repo
-is just a Merkel tree with data attached to it.
+is just a Merkel tree with data attached to it. Here is how we can look at the latest commit (more later on `HEAD`)
+
+```shell
+$ git show HEAD
+commit 02367ff9f7ccd2c6d6e15148c8039f2fb5932b97 (HEAD -> master, origin/master, origin/HEAD)
+Author: Alexey Kuleshevich <lehins@yandex.ru>
+Date:   Tue Oct 9 14:54:45 2018 +0000
+
+    Initial commit
+
+diff --git a/README.md b/README.md
+new file mode 100644
+...
+```
 
 If you imagine a tree with commits being nodes and edges being pointers to previous commits in
 history, with initial commit being at the root of it, then you should be able to picture the whole
@@ -135,9 +161,9 @@ repository as a graph of changes to files and directories in that repo.
 
 ### Branches
 
-A branch is way just a way to keep track of an alternate history, it is simply a way to point to a
+A branch is just a way to keep track of an alternate history, it is simply a way to point to a
 particular commit in that graph of commits. In reality, a branch is nothing less than just a file
-that has `sha` of a commit in it. Nevertheless, branches are crucial in deveopment.
+that has a `sha` of a commit in it. Nevertheless, branches are crucial in deveopment.
 
 In each repository there is always a main branch, usually named `master`. Most of the time commits
 should NOT be added directly to the `master` branch and all changes should be done to feature
@@ -162,8 +188,8 @@ unless new branch gets created.
 When we start working on an issue we almost always start by creating a branch.
 
 We can create a branch in a couple of ways, but we always need to start a branch from some point in
-the repo, either a commit `sha` or a name of a branch or a tag. In common terms, something that can be
-resolved to a `sha`.
+the repo, either a commit `sha` or a name of a branch or a tag. In common terms, something that can
+be resolved to a `sha`.
 
 So one way to create a branch is to create it from current state of remote `master`:
 
@@ -212,22 +238,58 @@ Switched to a new branch 'foo'
 
 `checkout -b` will create a branch and check it out all in one command.
 
+Currently our branch exists only locally. In order to have a matching branch on a remote repository
+we'll run:
+
 ### Introduce changes
 
 Create a file add it to the repo and push them to the remote:
 
-```
-$ echo "# Blah Blah" > blah.md
-$ git add blah.md
+```shell
+$ echo "Blah Blah" > blah.txt
+$ git add blah.txt
 $ git commit -am "My first useless commit"
-$ git push 
+$ git push
 ```
 
-* `add file`, `add -A`
+Making more changes to files:
+```shell
+$ rm blah.txt
+$ echo "# Booyah" > booyah.md
+$ git status
+$ git add -A # will add all files
+$ git commit -a # Will open you editor
+$ git push
+```
 
-* `commit file`, `commit -a`, `commit -am`
+Once done creating Merge Request in th UI is easy.
 
-### Update remote
+### Working with modules
 
-* `git push`
+`git` submodules are somewhat complicated beasts, but we don't need to go into much detail in
+order to be able to use them in a read only fashion.
+
+A quick motivation why they might be useful. In a common case when one private repository depends on
+another private repository we need to be able to automate that dependency not only locally, but also
+on CI. Problem with CI is that it is only possible to clone another private repo with a help of a
+secret token over HTTPS described earlier and the only way to deal with that issue is to use
+relative urls, which git submodules have native support for.
+
+So, here is what we need to do locally in order to clone a repository that contains submodules:
+
+```shell
+$ git clone --recursive git@gitlab.com:user-or-group/repo-name.git
+```
+
+If a repo has been already cloned, then we need to run `--init`:
+```shell
+$ git submodule update --init --recursive
+```
+
+Afterwards, whenever a submodule been updated, we just run:
+
+```
+$ git submodule update --recursive --remote
+```
+
 
