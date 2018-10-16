@@ -272,7 +272,7 @@ $ git commit -a # Will open you editor
 $ git push
 ```
 
-Once done creating Merge Request in th UI is easy.
+Once done, creating a Merge Request in the UI is easy.
 
 ### Working with modules
 
@@ -296,7 +296,7 @@ If a repo has been already cloned, then we need to run `--init`:
 $ git submodule update --init --recursive
 ```
 
-Afterwards, whenever a submodule been updated, we just run:
+Afterwards, whenever a submodule has been updated, we just run:
 
 ```
 $ git submodule update --recursive --remote
@@ -304,10 +304,10 @@ $ git submodule update --recursive --remote
 
 __Important__
 
-As it is mentioned above, submodules aren't updated autotmatically, which means if there is a change
-upstream it's not gonna be automatically reflect locally for each developer, moreover it isn't
-obvious that there was an update upstream. This poses a small problem, where main codebase isn't in
-sync with a dependency. This problem is resolve with common versioning scheme for the dependencies,
+As it is mentioned above, submodules aren't updated automatically, which means if there is a change
+upstream it's not gonna reflect locally for each developer on `git fetch`, moreover it isn't obvious
+that there was an update upstream. This poses a small problem, where main codebase isn't in sync
+with a dependency. This problem can be resolved with common versioning scheme for the dependencies,
 whenever git submodule is updated, the package will receive a bump in it's version together with a
 constraint increase in the cabal file. This in effect will prevent compilation until the above
 `update` command is executed.
