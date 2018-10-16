@@ -123,7 +123,7 @@ $ eval $(ssh-agent -s)
 $ ssh-add ~/.ssh/id_rsa
 ```
 
-* [Upload contents of a public key](https://docs.gitlab.com/ee/ssh/#adding-a-ssh-key-to-your-gitlab-account) (if default name was used it's gonna be `~/.ssh/id_rsa.pub`) to
+* [Upload contents of a public key](https://docs.gitlab.com/ee/ssh/#adding-a-ssh-key-to-your-gitlab-account) (if default file name was used it's gonna be `~/.ssh/id_rsa.pub`) to
   Gitlab at https://gitlab.com/profile/keys
 
 
@@ -162,7 +162,7 @@ repository as a graph of changes to files and directories in that repo.
 ### Branches
 
 A branch is just a way to keep track of an alternate history, it is simply a way to point to a
-particular commit in that graph of commits. In reality, a branch is nothing less than just a file
+particular commit in that graph of commits. In reality, a branch is nothing more than just a file
 that has a `sha` of a commit in it. Nevertheless, branches are crucial in deveopment.
 
 In each repository there is always a main branch, usually named `master`. Most of the time commits
@@ -177,7 +177,7 @@ different from what `origin/master`.
 ### HEAD
 
 At any point in time your local repository must point to a particular place in time, which is
-tracked by a speacial name `HEAD`. Normally it is pointing at some branch, but it's possible to be
+tracked by a special name `HEAD`. Normally it is pointing at some branch, but it's possible to be
 in a "detached `HEAD`" state, meaning it's pointing at some commit and any changes will get lost
 unless new branch gets created.
 
@@ -240,6 +240,16 @@ Switched to a new branch 'foo'
 
 Currently our branch exists only locally. In order to have a matching branch on a remote repository
 we'll run:
+
+```shell
+$ git push -u origin foo
+```
+
+In order to delete remote branch:
+
+```shell
+$ git push origin :foo
+```
 
 ### Introduce changes
 
