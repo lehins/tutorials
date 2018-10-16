@@ -1,6 +1,6 @@
 # Intro to `git` + Gitlab.
 
-This is a tutorial on how to do basic things with `git`, that are neccesary for working on a
+This is a tutorial on how to do basic things with `git`, which are neccesary for working on a
 multi-developer project with multiple private repositories hosted on gitlab.com
 
 ## Installing git
@@ -18,21 +18,21 @@ Mileage may vary depending on the OS:
 
 ## Configure git
 
-One of the first things to do upon clean install of git is to configure the user. Email shoul dmatch
-the one on gitlab, then all of the commits will be match up together the gitlab user:
+One of the first things to do upon clean install of git is to configure the user. Email should match
+the one on gitlab, then all of the commits will be matched up together with the gitlab user:
 
 ```
 $ git config --global user.email my-email@example.com
 $ git config --global user.name "FistName LastName"
 ```
 
-Next one is a very useful global list og ignore patterns:
+Next one is a very useful global list of ignore patterns:
 
 ```
 $ git config --global core.excludesfile $HOME/.gitignore_global
 ```
 
-And check current settings (instead of above commands it's possible to simply modify the file):
+To check current settings or modify settings manually instead of above commands simply modify the file:
 
 ```
 $ cat ~/.gitconfig
@@ -75,29 +75,29 @@ three available methods:
 
 * (bad) Type in a user name and password at the command line each time we want to access the remote
   repo. This is a very unproductive way to do work, moreover it's impossible with MFA turned on. So
-  we just forget about it.
+  we can just forget about it.
 
 * (bad) Create a personal Access Token and use it inside the repo URL for authentication. I am
   actually not 100% positive it can be used for development, since I only see `read_repository`
   permission in gitlab, which means you can clone and pull changes, but not make any updates to the
-  repository. So we'll won't talk about this method to much, but it will be relevant a bit later.
+  repository. So we'll won't talk about this method too much, but it will be relevant a bit later.
 
 * (good) The proper way to do development is to use a personal SSH key. This is what I'll explain
   next.
 
-Which of the above methods is used for authentication is decided from the url that was used for
-cloning a repository:
+Which one exactly of the above methods is being used for authentication is decided from the url that
+was used for cloning a repository, eg.:
 
 ```shell
 $ git clone git@gitlab.com:user-or-group/repo-name.git
 ```
 
 Above command will use `ssh` to communicate with gitlab and make a local copy of the repo into the
-`./repo-name` folder. But it won't work just yet, we need to setup authentication with ssh.
+`./repo-name` folder. But it won't work just yet, we need to setup authentication with ssh first.
 
 If instead you had used `https://gitlab.com/user-or-group/repo-name.git` or
 `https://username:access_token@gitlab.com/user-or-group/repo-name.git` then the earlier mentioned
-methods would have been used. At any time a url of a cloned a repository can be changed, no need to
+methods would have been used. At any time a url of a cloned repository can be changed, no need to
 remove it and clone from scratch:
 
 ```shell
