@@ -292,4 +292,25 @@ Afterwards, whenever a submodule been updated, we just run:
 $ git submodule update --recursive --remote
 ```
 
+__Important__
+
+As it is mentioned above, submodules aren't updated autotmatically, which means if there is a change
+upstream it's not gonna be automatically reflect locally for each developer, moreover it isn't
+obvious that there was an update upstream. This poses a small problem, where main codebase isn't in
+sync with a dependency. This problem is resolve with common versioning scheme for the dependencies,
+whenever git submodule is updated, the package will receive a bump in it's version together with a
+constraint increase in the cabal file. This in effect will prevent compilation until the above
+`update` command is executed.
+
+# Extra-credit
+
+## Adding a git submodule
+
+The command below will add a git submodule with relative path (i.e. the base path
+https://gitlab.com/group/ will be automatically prepended to it ) into the `submodule/repo-name`
+directory. Repository will also get cloned into that folder.
+
+```shell
+$ git submodule add ../repo-name.git submodules/repo-name
+```
 
